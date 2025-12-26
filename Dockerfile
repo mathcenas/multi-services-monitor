@@ -5,10 +5,14 @@ WORKDIR /app
 # Install Python and build tools for native modules
 RUN apk add --no-cache python3 make g++
 
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci
 
+# Copy all source files
 COPY . .
+
+# Build the application
 RUN npm run build
 RUN npm run build:server
 
