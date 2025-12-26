@@ -12,6 +12,9 @@ RUN npm ci
 # Copy all source files
 COPY . .
 
+# Debug: List files to verify src directory is present
+RUN echo "=== Files in /app ===" && ls -la && echo "=== Files in /app/src ===" && ls -la src/ && echo "=== Files in /app/server ===" && ls -la server/
+
 # Build the application
 RUN npm run build
 RUN npm run build:server
