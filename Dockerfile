@@ -19,7 +19,8 @@ WORKDIR /app
 # Install Python and build tools for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-COPY package*.json ./
+# Copy package files from builder stage
+COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
