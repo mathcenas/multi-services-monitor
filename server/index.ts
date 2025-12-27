@@ -231,7 +231,7 @@ app.get('/api/dashboard', (req, res) => {
   }
 });
 
-app.get('/*', (req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
