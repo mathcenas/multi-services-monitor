@@ -151,7 +151,7 @@ For each server, add the services you want to monitor:
 
 The application uses SQLite with the database stored at:
 - Development: `./monitoring.db`
-- Docker: `/data/monitoring.db` (persisted in a volume)
+- Docker: `./monitoring.db` (persisted in the project root directory)
 
 ## Building for Production
 

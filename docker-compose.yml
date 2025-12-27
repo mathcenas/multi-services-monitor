@@ -7,12 +7,9 @@ services:
       - "3008:3001"
       - "5173:5173"
     volumes:
-      - monitor-data:/data
+      - .:/data
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DB_PATH=/data/monitoring.db
     restart: unless-stopped
-
-volumes:
-  monitor-data:
