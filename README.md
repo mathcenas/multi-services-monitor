@@ -21,7 +21,7 @@ A web-based service monitoring system for managing and monitoring services acros
 docker-compose up -d
 ```
 
-2. Access the web interface at `http://localhost:5173`
+2. Access the web interface at `http://localhost:5178`
 
 3. The API is available at `http://localhost:3001/api`
 
@@ -37,7 +37,7 @@ npm install
 npm run dev
 ```
 
-This starts both the frontend (port 5173) and backend (port 3001).
+This starts both the frontend (port 5178) and backend (port 3001).
 
 ## API Endpoints
 
