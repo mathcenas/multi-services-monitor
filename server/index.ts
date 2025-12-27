@@ -1,12 +1,20 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import db from './db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+const distPath = path.join(__dirname, '..');
+app.use(express.static(distPath));
 
 app.get('/api/servers', (req, res) => {
   try {
@@ -221,6 +229,10 @@ app.get('/api/dashboard', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => {
