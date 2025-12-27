@@ -12,8 +12,10 @@ RUN npm ci
 # Copy all source files
 COPY . .
 
-# Debug: List files to verify src directory is present
-RUN echo "=== Files in /app ===" && ls -la && echo "=== Files in /app/src ===" && ls -la src/ && echo "=== Files in /app/server ===" && ls -la server/
+# Verify required directories exist
+RUN test -d src || (echo "ERROR: src directory is missing! Make sure all files are copied to the server." && exit 1)
+RUN test -d server || (echo "ERROR: server directory is missing! Make sure all files are copied to the server." && exit 1)
+RUN test -f src/main.tsx || (echo "ERROR: src/main.tsx is missing! Make sure all files are copied to the server." && exit 1)
 
 # Build the application
 RUN npm run build
