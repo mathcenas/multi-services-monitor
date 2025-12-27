@@ -5,7 +5,6 @@ services:
     build: .
     ports:
       - "3008:3001"
-      - "5178:5178"
     volumes:
       - .:/data
     environment:
