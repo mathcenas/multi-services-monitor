@@ -91,7 +91,8 @@ app.delete('/api/servers/:id', (req, res) => {
 app.get('/api/servers/:serverId/services', (req, res) => {
   try {
     const services = db.prepare(`
-      SELECT s.*,
+      SELECT s.id, s.server_id, s.name, s.type, s.check_command, s.description,
+        s.current_version, s.created_at, s.updated_at,
         ss.status as current_status,
         ss.message as current_message,
         ss.checked_at as last_checked
@@ -217,7 +218,8 @@ app.get('/api/dashboard', (req, res) => {
 
     const result = servers.map((server: any) => {
       const services = db.prepare(`
-        SELECT s.*,
+        SELECT s.id, s.server_id, s.name, s.type, s.check_command, s.description,
+          s.current_version, s.created_at, s.updated_at,
           ss.status as current_status,
           ss.message as current_message,
           ss.checked_at as last_checked
