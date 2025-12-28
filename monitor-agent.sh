@@ -1,7 +1,9 @@
 #!/bin/bash
 
-API_URL="http://your-monitor-server:3001/api"
+API_URL="${MONITOR_API_URL:-http://localhost:3001}/api"
 SERVER_NAME=$(hostname)
+SERVER_ID="${SERVER_ID:-1}"
+CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
 
 fetch_config() {
     local server_id=$1
@@ -33,21 +35,13 @@ send_status() {
         }"
 }
 
-main() {
-    if [ -z "$1" ]; then
-        echo "Usage: $0 <server_id>"
-        echo "Example: $0 1"
-        exit 1
-    fi
-
-    local server_id=$1
-
-    echo "Fetching configuration for server ID: ${server_id}"
-    config=$(fetch_config "$server_id")
+check_all_services() {
+    echo "Fetching configuration for server ID: ${SERVER_ID}"
+    config=$(fetch_config "$SERVER_ID")
 
     if [ -z "$config" ]; then
         echo "Failed to fetch configuration"
-        exit 1
+        return 1
     fi
 
     echo "Configuration received, checking services..."
@@ -68,4 +62,20 @@ main() {
     echo "All services checked and reported"
 }
 
-main "$@"
+main() {
+    echo "Starting monitoring agent..."
+    echo "API URL: ${API_URL}"
+    echo "Server ID: ${SERVER_ID}"
+    echo "Server Name: ${SERVER_NAME}"
+    echo "Check Interval: ${CHECK_INTERVAL} seconds"
+    echo ""
+
+    while true; do
+        check_all_services
+        echo ""
+        echo "Waiting ${CHECK_INTERVAL} seconds before next check..."
+        sleep "$CHECK_INTERVAL"
+    done
+}
+
+main

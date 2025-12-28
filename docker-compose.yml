@@ -6,9 +6,25 @@ services:
     ports:
       - "3008:3001"
     volumes:
-      - .:/data
+      - monitoring_data:/data
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DB_PATH=/data/monitoring.db
     restart: unless-stopped
+
+  agent:
+    build: .
+    command: bash /app/monitor-agent.sh
+    volumes:
+      - monitoring_data:/data
+    environment:
+      - MONITOR_API_URL=http://monitor:3001
+      - SERVER_ID=1
+      - DB_PATH=/data/monitoring.db
+    depends_on:
+      - monitor
+    restart: unless-stopped
+
+volumes:
+  monitoring_data:

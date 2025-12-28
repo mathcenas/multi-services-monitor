@@ -25,14 +25,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install Python and build tools for better-sqlite3
-RUN apk add --no-cache python3 make g++
+# Install Python and build tools for better-sqlite3, plus monitoring tools
+RUN apk add --no-cache python3 make g++ bash curl jq
 
 # Copy package files from builder stage
 COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY monitor-agent.sh ./
+RUN chmod +x monitor-agent.sh
 
 ENV NODE_ENV=production
 ENV PORT=3001
