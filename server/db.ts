@@ -48,4 +48,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_services_server_id ON services(server_id);
 `);
 
+const columnExists = db.prepare(`
+  SELECT COUNT(*) as count
+  FROM pragma_table_info('services')
+  WHERE name = 'current_version'
+`).get() as { count: number };
+
+if (columnExists.count === 0) {
+  console.log('Adding current_version column to services table...');
+  db.exec(`ALTER TABLE services ADD COLUMN current_version TEXT;`);
+  console.log('Migration completed: current_version column added');
+}
+
 export default db;
