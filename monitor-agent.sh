@@ -44,7 +44,26 @@ check_all_services() {
         return 1
     fi
 
-    echo "Configuration received, checking services..."
+    if ! echo "$config" | jq -e . >/dev/null 2>&1; then
+        echo "ERROR: Invalid JSON response from server"
+        echo "Response received:"
+        echo "$config"
+        return 1
+    fi
+
+    if echo "$config" | jq -e '.error' >/dev/null 2>&1; then
+        echo "ERROR: $(echo "$config" | jq -r '.error')"
+        return 1
+    fi
+
+    service_count=$(echo "$config" | jq '.services | length')
+    if [ "$service_count" -eq 0 ]; then
+        echo "No services configured for this server yet"
+        echo "Please add services through the web interface"
+        return 0
+    fi
+
+    echo "Configuration received, checking ${service_count} service(s)..."
 
     echo "$config" | jq -r '.services[] | @json' | while read -r service; do
         service_name=$(echo "$service" | jq -r '.name')
