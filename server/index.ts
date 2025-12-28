@@ -176,7 +176,7 @@ app.delete('/api/services/:id', (req, res) => {
 
 app.post('/api/status', (req, res) => {
   try {
-    const { server_name, service_name, status, message } = req.body;
+    const { server_name, service_name, status, message, version } = req.body;
 
     const server = db.prepare('SELECT id FROM servers WHERE name = ?').get(server_name) as any;
     if (!server) {
@@ -186,6 +186,14 @@ app.post('/api/status', (req, res) => {
     const service = db.prepare('SELECT id FROM services WHERE server_id = ? AND name = ?').get(server.id, service_name) as any;
     if (!service) {
       return res.status(404).json({ error: 'Service not found' });
+    }
+
+    if (version) {
+      db.prepare(`
+        UPDATE services
+        SET current_version = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(version, service.id);
     }
 
     db.prepare(`

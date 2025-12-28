@@ -300,6 +300,11 @@ sudo systemctl start monitor-agent`}
                         {service.current_status}
                       </span>
                     )}
+                    {service.current_version && (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        v{service.current_version}
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-1 text-sm">
                     <div>

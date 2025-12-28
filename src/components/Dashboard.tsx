@@ -151,7 +151,14 @@ export function Dashboard() {
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-gray-900">{service.name}</h4>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
+                              {service.current_version && (
+                                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                  v{service.current_version}
+                                </span>
+                              )}
+                            </div>
                             {isActive ? (
                               <CheckCircle size={20} className="text-green-600" />
                             ) : isDown ? (

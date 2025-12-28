@@ -27,6 +27,7 @@ db.exec(`
     type TEXT NOT NULL DEFAULT 'systemd',
     check_command TEXT NOT NULL,
     description TEXT,
+    current_version TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,

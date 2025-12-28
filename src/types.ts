@@ -18,6 +18,7 @@ export interface Service {
   type: string;
   check_command: string;
   description: string;
+  current_version?: string;
   created_at: string;
   updated_at: string;
   current_status?: string;
