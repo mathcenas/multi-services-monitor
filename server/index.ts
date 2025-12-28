@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import db from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -228,6 +229,18 @@ app.get('/api/dashboard', (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+app.get('/monitor-agent.sh', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, 'monitor-agent.sh');
+    const script = readFileSync(scriptPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
+    res.send(script);
+  } catch (error) {
+    res.status(404).json({ error: 'Monitor agent script not found' });
   }
 });
 

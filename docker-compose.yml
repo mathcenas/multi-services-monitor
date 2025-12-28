@@ -15,7 +15,7 @@ services:
 
   agent:
     build: .
-    command: bash /app/monitor-agent.sh
+    command: bash /app/dist/server/monitor-agent.sh
     volumes:
       - monitoring_data:/data
     environment:

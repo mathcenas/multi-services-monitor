@@ -103,6 +103,10 @@ export function ServerList({ onSelectServer }: { onSelectServer: (server: Server
 
             <div className="space-y-2 text-sm">
               <div>
+                <span className="text-gray-500">Server ID:</span>
+                <span className="ml-2 font-mono text-gray-900 font-semibold">{server.id}</span>
+              </div>
+              <div>
                 <span className="text-gray-500">Hostname:</span>
                 <span className="ml-2 text-gray-900">{server.hostname}</span>
               </div>

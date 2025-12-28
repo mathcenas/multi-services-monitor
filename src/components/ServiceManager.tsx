@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
 import { api } from '../api';
-import { ArrowLeft, Plus, Edit2, Trash2, CheckCircle, XCircle, Clock, Code } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
 interface ServiceManagerProps {
@@ -16,6 +16,7 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<any>(null);
+  const [showAgentSetup, setShowAgentSetup] = useState(false);
 
   useEffect(() => {
     loadServices();
@@ -94,6 +95,13 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
         <h3 className="text-xl font-semibold text-gray-900">Services</h3>
         <div className="flex gap-3">
           <button
+            onClick={() => setShowAgentSetup(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Terminal size={20} />
+            Agent Setup
+          </button>
+          <button
             onClick={handleShowConfig}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
@@ -116,6 +124,107 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
           service={editingService}
           onClose={handleFormClose}
         />
+      )}
+
+      {showAgentSetup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-auto">
+            <div className="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Monitoring Agent Setup</h3>
+              <button
+                onClick={() => setShowAgentSetup(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Server Information</h4>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Server ID:</span>
+                    <code className="font-mono font-bold text-blue-600">{server.id}</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Server Name:</span>
+                    <code className="font-mono text-gray-900">{server.name}</code>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">1. Download the monitoring script</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  Download the monitor-agent.sh script to your server:
+                </p>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`curl -O http://YOUR-MONITOR-IP:3008/monitor-agent.sh
+chmod +x monitor-agent.sh`}
+                </pre>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">2. Configure environment variables</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  Set these environment variables (replace YOUR-MONITOR-IP with your actual IP):
+                </p>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`export MONITOR_API_URL=http://YOUR-MONITOR-IP:3008
+export SERVER_ID=${server.id}
+export CHECK_INTERVAL=60  # Check every 60 seconds`}
+                </pre>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">3. Run the agent</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  Run the monitoring agent:
+                </p>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`./monitor-agent.sh`}
+                </pre>
+                <p className="text-sm text-gray-600 mt-3">
+                  Or run as a systemd service (recommended for production):
+                </p>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm mt-2">
+{`sudo tee /etc/systemd/system/monitor-agent.service > /dev/null <<EOF
+[Unit]
+Description=Server Monitoring Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Environment="MONITOR_API_URL=http://YOUR-MONITOR-IP:3008"
+Environment="SERVER_ID=${server.id}"
+Environment="CHECK_INTERVAL=60"
+ExecStart=/path/to/monitor-agent.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable monitor-agent
+sudo systemctl start monitor-agent`}
+                </pre>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
+                <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                  <li>Replace YOUR-MONITOR-IP with the actual IP address of this monitoring server</li>
+                  <li>The agent requires curl, jq, and bash to be installed on the target server</li>
+                  <li>Make sure the monitoring server is accessible from your target server</li>
+                  <li>The agent will continuously check services every 60 seconds by default</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showConfig && config && (
