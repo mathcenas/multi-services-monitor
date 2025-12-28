@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
 import { api } from '../api';
-import { ArrowLeft, Plus, Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
 interface ServiceManagerProps {
