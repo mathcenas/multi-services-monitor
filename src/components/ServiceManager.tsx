@@ -186,7 +186,7 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
                   Download the monitor-agent.sh script to your server:
                 </p>
                 <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
-{`curl -O http://YOUR-MONITOR-IP:3008/monitor-agent.sh
+{`curl -O ${window.location.origin}/monitor-agent.sh
 chmod +x monitor-agent.sh`}
                 </pre>
               </div>
@@ -194,10 +194,10 @@ chmod +x monitor-agent.sh`}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">2. Configure environment variables</h4>
                 <p className="text-sm text-gray-600 mb-3">
-                  Set these environment variables (replace YOUR-MONITOR-IP with your actual IP):
+                  Set these environment variables:
                 </p>
                 <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
-{`export MONITOR_API_URL=http://YOUR-MONITOR-IP:3008
+{`export MONITOR_API_URL=${window.location.origin}
 export SERVER_ID=${server.id}
 export CHECK_INTERVAL=60  # Check every 60 seconds`}
                 </pre>
@@ -223,7 +223,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-Environment="MONITOR_API_URL=http://YOUR-MONITOR-IP:3008"
+Environment="MONITOR_API_URL=${window.location.origin}"
 Environment="SERVER_ID=${server.id}"
 Environment="CHECK_INTERVAL=60"
 ExecStart=/path/to/monitor-agent.sh
@@ -243,8 +243,7 @@ sudo systemctl start monitor-agent`}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
                 <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                  <li>Replace YOUR-MONITOR-IP with the actual IP address of this monitoring server</li>
-                  <li>Make sure the monitoring server is accessible from your target server (check firewall rules)</li>
+                  <li>Make sure this monitoring server ({window.location.origin}) is accessible from your target server (check firewall rules)</li>
                   <li>The agent will continuously check services every 60 seconds by default</li>
                   <li>Run the agent as root or with sufficient permissions to check system services</li>
                 </ul>
