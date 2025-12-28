@@ -153,6 +153,33 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
                 </div>
               </div>
 
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
+                <p className="text-sm text-red-800 mb-3">
+                  Before running the agent, install these required tools:
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-red-900 mb-1">Ubuntu/Debian:</p>
+                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+{`sudo apt-get update && sudo apt-get install -y curl jq`}
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-900 mb-1">CentOS/RHEL/Rocky:</p>
+                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+{`sudo yum install -y curl jq`}
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-900 mb-1">Alpine:</p>
+                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+{`apk add curl jq bash`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">1. Download the monitoring script</h4>
                 <p className="text-sm text-gray-600 mb-3">
@@ -217,9 +244,9 @@ sudo systemctl start monitor-agent`}
                 <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
                 <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
                   <li>Replace YOUR-MONITOR-IP with the actual IP address of this monitoring server</li>
-                  <li>The agent requires curl, jq, and bash to be installed on the target server</li>
-                  <li>Make sure the monitoring server is accessible from your target server</li>
+                  <li>Make sure the monitoring server is accessible from your target server (check firewall rules)</li>
                   <li>The agent will continuously check services every 60 seconds by default</li>
+                  <li>Run the agent as root or with sufficient permissions to check system services</li>
                 </ul>
               </div>
             </div>
