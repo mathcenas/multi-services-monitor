@@ -1,6 +1,6 @@
 #!/bin/bash
 
-API_URL="${MONITOR_API_URL:-http://localhost:3001}/api"
+API_URL="https://stats.cenas-support.com/api"
 SERVER_NAME=$(hostname)
 SERVER_ID="${SERVER_ID:-1}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
