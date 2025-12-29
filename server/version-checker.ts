@@ -112,6 +112,20 @@ async function fetchLatestVersions(): Promise<LatestVersions> {
     console.error('Failed to fetch MySQL version:', error);
   }
 
+  try {
+    // WildFly (open source JBoss)
+    const wildflyResponse = await fetch('https://api.github.com/repos/wildfly/wildfly/releases/latest');
+    if (wildflyResponse.ok) {
+      const wildflyData = await wildflyResponse.json();
+      const version = wildflyData.tag_name.replace(/^v?/, '');
+      versions.wildfly = version;
+      versions.jboss = version;
+      versions['jboss-eap'] = version;
+    }
+  } catch (error) {
+    console.error('Failed to fetch WildFly/JBoss version:', error);
+  }
+
   versionCache.data = versions;
   versionCache.timestamp = now;
 

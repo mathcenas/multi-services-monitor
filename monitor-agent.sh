@@ -36,9 +36,6 @@ get_service_version() {
         mysql|mariadb)
             version=$(mysql --version 2>/dev/null | sed -E 's/.*Distrib ([0-9.]+).*/\1/' 2>/dev/null || mysqld --version 2>/dev/null | sed -E 's/.*Ver ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
-        postgresql|postgres)
-            version=$(psql --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/' 2>/dev/null || postgres --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/' 2>/dev/null || echo "")
-            ;;
         redis|redis-server)
             version=$(redis-server --version 2>/dev/null | sed -E 's/.*v=([0-9.]+).*/\1/' 2>/dev/null || redis-cli --version 2>/dev/null | sed -E 's/.*redis-cli ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
@@ -56,6 +53,22 @@ get_service_version() {
             ;;
         sshd|ssh)
             version=$(ssh -V 2>&1 | head -n 1 | sed -E 's/.*OpenSSH_([0-9.]+).*/\1/' 2>/dev/null || echo "")
+            ;;
+        jboss|wildfly|jboss-eap)
+            if command -v /opt/jboss/wildfly/bin/standalone.sh >/dev/null 2>&1; then
+                version=$(/opt/jboss/wildfly/bin/standalone.sh --version 2>/dev/null | grep -oP 'WildFly Full \K[0-9.]+' || echo "")
+            elif command -v /opt/jboss-eap/bin/standalone.sh >/dev/null 2>&1; then
+                version=$(/opt/jboss-eap/bin/standalone.sh --version 2>/dev/null | grep -oP 'JBoss EAP \K[0-9.]+' || echo "")
+            elif [ -f "/opt/jboss/wildfly/version.txt" ]; then
+                version=$(cat /opt/jboss/wildfly/version.txt 2>/dev/null | sed -E 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || echo "")
+            elif [ -f "/opt/jboss-eap/version.txt" ]; then
+                version=$(cat /opt/jboss-eap/version.txt 2>/dev/null | sed -E 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || echo "")
+            else
+                version=""
+            fi
+            ;;
+        postgres|postgresql)
+            version=$(psql --version 2>/dev/null | sed -E 's/.*PostgreSQL[[:space:]]+([0-9.]+).*/\1/' 2>/dev/null || postgres --version 2>/dev/null | sed -E 's/.*PostgreSQL[[:space:]]+([0-9.]+).*/\1/' 2>/dev/null || pg_config --version 2>/dev/null | sed -E 's/.*PostgreSQL[[:space:]]+([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         *)
             version=""

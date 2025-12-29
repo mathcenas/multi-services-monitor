@@ -18,6 +18,7 @@ services:
     command: bash /app/dist/server/monitor-agent.sh
     volumes:
       - monitoring_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - MONITOR_API_URL=http://monitor:3001
       - SERVER_ID=1
