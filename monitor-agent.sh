@@ -70,10 +70,11 @@ check_os_updates() {
 
 get_service_version() {
     local service_name=$1
+    local service_name_lower=$(echo "$service_name" | tr '[:upper:]' '[:lower:]')
     local version=""
 
-    case "$service_name" in
-        os|operating-system|system)
+    case "$service_name_lower" in
+        os|operating-system|system|*patch*)
             os_info=$(get_os_info)
             version=$(echo "$os_info" | cut -d'|' -f2)
             updates=$(check_os_updates)
