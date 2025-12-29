@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { api } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function Dashboard() {
   const [servers, setServers] = useState<DashboardServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedServers, setExpandedServers] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadDashboard();
@@ -29,6 +30,24 @@ export function Dashboard() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadDashboard();
+  };
+
+  const toggleServerExpansion = (serverId: number) => {
+    const newExpanded = new Set(expandedServers);
+    if (newExpanded.has(serverId)) {
+      newExpanded.delete(serverId);
+    } else {
+      newExpanded.add(serverId);
+    }
+    setExpandedServers(newExpanded);
+  };
+
+  const getServerSummary = (server: DashboardServer) => {
+    const down = server.services.filter(s => s.current_status === 'down' || s.current_status === 'inactive').length;
+    const updates = server.services.filter(s => needsUpdate(s)).length;
+    const active = server.services.filter(s => s.current_status === 'up' || s.current_status === 'active').length;
+
+    return { down, updates, active, total: server.services.length };
   };
 
   const compareVersions = (current: string, latest: string): number => {
@@ -128,29 +147,64 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {servers.map(server => {
-          const serverDown = server.services.filter(s =>
-            s.current_status === 'down' || s.current_status === 'inactive'
-          ).length;
+          const summary = getServerSummary(server);
+          const isExpanded = expandedServers.has(server.id);
+
+          let statusColor = 'bg-green-50 border-green-200';
+          let badgeColor = 'bg-green-100 text-green-700';
+          let statusIcon = <CheckCircle size={20} className="text-green-600" />;
+
+          if (summary.down > 0) {
+            statusColor = 'bg-red-50 border-red-200';
+            badgeColor = 'bg-red-100 text-red-700';
+            statusIcon = <XCircle size={20} className="text-red-600" />;
+          } else if (summary.updates > 0) {
+            statusColor = 'bg-orange-50 border-orange-200';
+            badgeColor = 'bg-orange-100 text-orange-700';
+            statusIcon = <AlertTriangle size={20} className="text-orange-600" />;
+          }
 
           return (
-            <div key={server.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
+            <div key={server.id} className={`rounded-lg shadow-sm border-2 transition-all ${statusColor}`}>
+              <div
+                className="p-4 cursor-pointer hover:bg-white/50 transition-colors"
+                onClick={() => toggleServerExpansion(server.id)}
+              >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{server.name}</h3>
-                    <p className="text-sm text-gray-500">{server.hostname} • {server.cloud_provider}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-gray-600">
+                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {statusIcon}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{server.name}</h3>
+                        <p className="text-sm text-gray-600">{server.hostname} • {server.cloud_provider}</p>
+                      </div>
+                    </div>
                   </div>
-                  {serverDown > 0 && (
-                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                      {serverDown} service{serverDown > 1 ? 's' : ''} down
+                  <div className="flex items-center gap-3">
+                    {summary.down > 0 && (
+                      <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                        {summary.down} down
+                      </span>
+                    )}
+                    {summary.updates > 0 && summary.down === 0 && (
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                        {summary.updates} update{summary.updates > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${badgeColor}`}>
+                      {summary.total} service{summary.total !== 1 ? 's' : ''}
                     </span>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              <div className="p-6">
+              {isExpanded && (
+                <div className="p-6 pt-2 border-t border-gray-200 bg-white">
                 {server.services.length === 0 ? (
                   <p className="text-gray-500 text-sm">No services configured</p>
                 ) : (
@@ -229,7 +283,8 @@ export function Dashboard() {
                     })}
                   </div>
                 )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
