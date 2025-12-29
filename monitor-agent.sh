@@ -25,37 +25,37 @@ get_service_version() {
 
     case "$service_name" in
         apache2|httpd)
-            version=$(httpd -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/' || apache2 -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/')
+            version=$(httpd -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/' 2>/dev/null || apache2 -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         nginx)
-            version=$(nginx -v 2>&1 | sed -E 's/.*nginx\/([0-9.]+).*/\1/')
+            version=$(nginx -v 2>&1 | sed -E 's/.*nginx\/([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         docker)
-            version=$(docker --version 2>/dev/null | sed -E 's/.*version ([0-9.]+).*/\1/')
+            version=$(docker --version 2>/dev/null | sed -E 's/.*version ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         mysql|mariadb)
-            version=$(mysql --version 2>/dev/null | sed -E 's/.*Distrib ([0-9.]+).*/\1/' || mysqld --version 2>/dev/null | sed -E 's/.*Ver ([0-9.]+).*/\1/')
+            version=$(mysql --version 2>/dev/null | sed -E 's/.*Distrib ([0-9.]+).*/\1/' 2>/dev/null || mysqld --version 2>/dev/null | sed -E 's/.*Ver ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         postgresql|postgres)
-            version=$(psql --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/' || postgres --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/')
+            version=$(psql --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/' 2>/dev/null || postgres --version 2>/dev/null | sed -E 's/.*PostgreSQL ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         redis|redis-server)
-            version=$(redis-server --version 2>/dev/null | sed -E 's/.*v=([0-9.]+).*/\1/' || redis-cli --version 2>/dev/null | sed -E 's/.*redis-cli ([0-9.]+).*/\1/')
+            version=$(redis-server --version 2>/dev/null | sed -E 's/.*v=([0-9.]+).*/\1/' 2>/dev/null || redis-cli --version 2>/dev/null | sed -E 's/.*redis-cli ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         mongodb|mongod)
-            version=$(mongod --version 2>/dev/null | grep "db version" | sed -E 's/.*v([0-9.]+).*/\1/')
+            version=$(mongod --version 2>/dev/null | grep "db version" | sed -E 's/.*v([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         php|php-fpm)
-            version=$(php -v 2>/dev/null | head -n 1 | sed -E 's/PHP ([0-9.]+).*/\1/')
+            version=$(php -v 2>/dev/null | head -n 1 | sed -E 's/PHP ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         node|nodejs)
-            version=$(node --version 2>/dev/null | sed 's/v//')
+            version=$(node --version 2>/dev/null | sed 's/v//' 2>/dev/null || echo "")
             ;;
         python|python3)
-            version=$(python3 --version 2>/dev/null | sed -E 's/Python ([0-9.]+).*/\1/' || python --version 2>/dev/null | sed -E 's/Python ([0-9.]+).*/\1/')
+            version=$(python3 --version 2>/dev/null | sed -E 's/Python ([0-9.]+).*/\1/' 2>/dev/null || python --version 2>/dev/null | sed -E 's/Python ([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         sshd|ssh)
-            version=$(sshd -V 2>&1 | head -n 1 | sed -E 's/.*OpenSSH_([0-9.]+).*/\1/' || ssh -V 2>&1 | head -n 1 | sed -E 's/.*OpenSSH_([0-9.]+).*/\1/')
+            version=$(ssh -V 2>&1 | head -n 1 | sed -E 's/.*OpenSSH_([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;
         *)
             version=""

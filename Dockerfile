@@ -26,7 +26,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install Python and build tools for better-sqlite3, plus monitoring tools
-RUN apk add --no-cache python3 make g++ bash curl jq
+RUN apk add --no-cache python3 make g++ bash curl jq docker openssh-client
 
 # Copy package files from builder stage
 COPY --from=builder /app/package*.json ./
