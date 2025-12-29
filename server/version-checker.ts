@@ -126,6 +126,84 @@ async function fetchLatestVersions(): Promise<LatestVersions> {
     console.error('Failed to fetch WildFly/JBoss version:', error);
   }
 
+  try {
+    // Ubuntu LTS
+    const ubuntuResponse = await fetch('https://api.launchpad.net/devel/ubuntu/series');
+    if (ubuntuResponse.ok) {
+      const ubuntuData = await ubuntuResponse.json();
+      const ltsVersions = ubuntuData.entries
+        .filter((entry: any) => entry.supported && entry.name)
+        .sort((a: any, b: any) => b.version.localeCompare(a.version));
+      if (ltsVersions.length > 0) {
+        versions.ubuntu = ltsVersions[0].version;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch Ubuntu version:', error);
+  }
+
+  try {
+    // Debian
+    const debianResponse = await fetch('https://www.debian.org/releases/stable/');
+    if (debianResponse.ok) {
+      const debianHtml = await debianResponse.text();
+      const match = debianHtml.match(/Debian (\d+)/i);
+      if (match) {
+        versions.debian = match[1];
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch Debian version:', error);
+  }
+
+  try {
+    // CentOS Stream / RHEL
+    const centosResponse = await fetch('https://www.centos.org/download/');
+    if (centosResponse.ok) {
+      const centosHtml = await centosResponse.text();
+      const match = centosHtml.match(/CentOS Stream (\d+)/);
+      if (match) {
+        versions.centos = match[1];
+        versions.rhel = match[1];
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch CentOS version:', error);
+  }
+
+  try {
+    // Alpine Linux
+    const alpineResponse = await fetch('https://alpinelinux.org/downloads/');
+    if (alpineResponse.ok) {
+      const alpineHtml = await alpineResponse.text();
+      const match = alpineHtml.match(/alpine-standard-(\d+\.\d+\.\d+)/);
+      if (match) {
+        versions.alpine = match[1];
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch Alpine version:', error);
+  }
+
+  try {
+    // Fedora
+    const fedoraResponse = await fetch('https://fedoraproject.org/');
+    if (fedoraResponse.ok) {
+      const fedoraHtml = await fedoraResponse.text();
+      const match = fedoraHtml.match(/Fedora (\d+)/);
+      if (match) {
+        versions.fedora = match[1];
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch Fedora version:', error);
+  }
+
+  // Add aliases for OS
+  versions.os = versions.ubuntu || versions.debian || versions.centos || versions.alpine || versions.fedora || '';
+  versions['operating-system'] = versions.os;
+  versions.system = versions.os;
+
   versionCache.data = versions;
   versionCache.timestamp = now;
 

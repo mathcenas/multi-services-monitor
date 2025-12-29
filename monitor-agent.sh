@@ -19,11 +19,68 @@ check_service() {
     fi
 }
 
+get_os_info() {
+    if [ -f "/etc/os-release" ]; then
+        . /etc/os-release
+        echo "${ID}|${VERSION_ID}|${NAME} ${VERSION_ID}"
+    elif [ -f "/etc/redhat-release" ]; then
+        content=$(cat /etc/redhat-release)
+        version=$(echo "$content" | sed -E 's/.*release ([0-9.]+).*/\1/')
+        echo "rhel|${version}|${content}"
+    else
+        echo "unknown|unknown|Unknown OS"
+    fi
+}
+
+check_os_updates() {
+    local updates_available=0
+
+    if [ -f "/etc/os-release" ]; then
+        . /etc/os-release
+        case "$ID" in
+            ubuntu|debian)
+                if command -v apt-get >/dev/null 2>&1; then
+                    apt-get update -qq 2>/dev/null
+                    updates_available=$(apt-get -s upgrade 2>/dev/null | grep -P '^\d+ upgraded' | cut -d" " -f1)
+                fi
+                ;;
+            rhel|centos|rocky|almalinux|fedora)
+                if command -v dnf >/dev/null 2>&1; then
+                    updates_available=$(dnf check-update -q 2>/dev/null | grep -v "^$" | grep -v "Last metadata" | wc -l)
+                elif command -v yum >/dev/null 2>&1; then
+                    updates_available=$(yum check-update -q 2>/dev/null | grep -v "^$" | wc -l)
+                fi
+                ;;
+            alpine)
+                if command -v apk >/dev/null 2>&1; then
+                    apk update -q 2>/dev/null
+                    updates_available=$(apk list -u 2>/dev/null | wc -l)
+                fi
+                ;;
+            arch)
+                if command -v pacman >/dev/null 2>&1; then
+                    updates_available=$(pacman -Qu 2>/dev/null | wc -l)
+                fi
+                ;;
+        esac
+    fi
+
+    echo "$updates_available"
+}
+
 get_service_version() {
     local service_name=$1
     local version=""
 
     case "$service_name" in
+        os|operating-system|system)
+            os_info=$(get_os_info)
+            version=$(echo "$os_info" | cut -d'|' -f2)
+            updates=$(check_os_updates)
+            if [ "$updates" -gt 0 ]; then
+                version="${version} (${updates} updates available)"
+            fi
+            ;;
         apache2|httpd)
             version=$(httpd -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/' 2>/dev/null || apache2 -v 2>/dev/null | grep "Server version" | sed -E 's/.*Apache\/([0-9.]+).*/\1/' 2>/dev/null || echo "")
             ;;

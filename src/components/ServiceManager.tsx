@@ -72,9 +72,17 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
     return 'bg-red-100 text-red-700';
   };
 
+  const extractVersion = (versionString: string): string => {
+    const match = versionString.match(/^(\d+\.?\d*\.?\d*)/);
+    return match ? match[1] : versionString;
+  };
+
   const compareVersions = (current: string, latest: string): number => {
-    const currentParts = current.split('.').map(Number);
-    const latestParts = latest.split('.').map(Number);
+    const cleanCurrent = extractVersion(current);
+    const cleanLatest = extractVersion(latest);
+
+    const currentParts = cleanCurrent.split('.').map(Number);
+    const latestParts = cleanLatest.split('.').map(Number);
 
     for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
       const curr = currentParts[i] || 0;
@@ -320,9 +328,16 @@ sudo systemctl start monitor-agent`}
                       </span>
                     )}
                     {service.current_version && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        v{service.current_version}
-                      </span>
+                      <>
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          v{extractVersion(service.current_version)}
+                        </span>
+                        {service.current_version.includes('updates available') && (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                            {service.current_version.match(/\((\d+ updates available)\)/)?.[1]}
+                          </span>
+                        )}
+                      </>
                     )}
                     {service.latest_version && needsUpdate(service) && (
                       <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
