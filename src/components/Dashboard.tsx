@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { DashboardServer } from '../types';
+import { DashboardServer, Service } from '../types';
 import { api } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export function Dashboard() {
   const [servers, setServers] = useState<DashboardServer[]>([]);
@@ -29,6 +29,26 @@ export function Dashboard() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadDashboard();
+  };
+
+  const compareVersions = (current: string, latest: string): number => {
+    const currentParts = current.split('.').map(Number);
+    const latestParts = latest.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+      const curr = currentParts[i] || 0;
+      const lat = latestParts[i] || 0;
+
+      if (curr < lat) return -1;
+      if (curr > lat) return 1;
+    }
+
+    return 0;
+  };
+
+  const needsUpdate = (service: Service): boolean => {
+    if (!service.current_version || !service.latest_version) return false;
+    return compareVersions(service.current_version, service.latest_version) < 0;
   };
 
   const getOverallStats = () => {
@@ -153,11 +173,24 @@ export function Dashboard() {
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
-                              {service.current_version && (
-                                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                  v{service.current_version}
-                                </span>
-                              )}
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {service.current_version && (
+                                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                    v{service.current_version}
+                                  </span>
+                                )}
+                                {service.latest_version && needsUpdate(service) && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">
+                                    <AlertTriangle size={10} />
+                                    v{service.latest_version} available
+                                  </span>
+                                )}
+                                {service.latest_version && !needsUpdate(service) && service.current_version && (
+                                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                                    Up to date
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {isActive ? (
                               <CheckCircle size={20} className="text-green-600" />

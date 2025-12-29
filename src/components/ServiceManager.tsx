@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
 import { api } from '../api';
-import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
 interface ServiceManagerProps {
@@ -70,6 +70,26 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
     if (!status) return 'bg-gray-100 text-gray-700';
     if (status === 'up' || status === 'active') return 'bg-green-100 text-green-700';
     return 'bg-red-100 text-red-700';
+  };
+
+  const compareVersions = (current: string, latest: string): number => {
+    const currentParts = current.split('.').map(Number);
+    const latestParts = latest.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+      const curr = currentParts[i] || 0;
+      const lat = latestParts[i] || 0;
+
+      if (curr < lat) return -1;
+      if (curr > lat) return 1;
+    }
+
+    return 0;
+  };
+
+  const needsUpdate = (service: Service): boolean => {
+    if (!service.current_version || !service.latest_version) return false;
+    return compareVersions(service.current_version, service.latest_version) < 0;
   };
 
   if (loading) {
@@ -302,6 +322,17 @@ sudo systemctl start monitor-agent`}
                     {service.current_version && (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                         v{service.current_version}
+                      </span>
+                    )}
+                    {service.latest_version && needsUpdate(service) && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                        <AlertTriangle size={12} />
+                        v{service.latest_version} available
+                      </span>
+                    )}
+                    {service.latest_version && !needsUpdate(service) && service.current_version && (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Up to date
                       </span>
                     )}
                   </div>

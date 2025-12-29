@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import db from './db.js';
+import { getAllLatestVersions } from './version-checker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,7 +89,7 @@ app.delete('/api/servers/:id', (req, res) => {
   }
 });
 
-app.get('/api/servers/:serverId/services', (req, res) => {
+app.get('/api/servers/:serverId/services', async (req, res) => {
   try {
     const services = db.prepare(`
       SELECT s.id, s.server_id, s.name, s.type, s.check_command, s.description,
@@ -101,8 +102,16 @@ app.get('/api/servers/:serverId/services', (req, res) => {
         AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
       WHERE s.server_id = ?
       ORDER BY s.name
-    `).all(req.params.serverId);
-    res.json(services);
+    `).all(req.params.serverId) as any[];
+
+    const latestVersions = await getAllLatestVersions();
+
+    const servicesWithLatest = services.map(service => ({
+      ...service,
+      latest_version: latestVersions[service.name.toLowerCase()] || null
+    }));
+
+    res.json(servicesWithLatest);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch services' });
   }
@@ -208,13 +217,15 @@ app.post('/api/status', (req, res) => {
   }
 });
 
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', async (req, res) => {
   try {
     const servers = db.prepare(`
       SELECT s.*
       FROM servers s
       ORDER BY s.name
     `).all() as any[];
+
+    const latestVersions = await getAllLatestVersions();
 
     const result = servers.map((server: any) => {
       const services = db.prepare(`
@@ -228,11 +239,16 @@ app.get('/api/dashboard', (req, res) => {
           AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
         WHERE s.server_id = ?
         ORDER BY s.name
-      `).all(server.id);
+      `).all(server.id) as any[];
+
+      const servicesWithLatest = services.map(service => ({
+        ...service,
+        latest_version: latestVersions[service.name.toLowerCase()] || null
+      }));
 
       return {
         ...server,
-        services
+        services: servicesWithLatest
       };
     });
 
