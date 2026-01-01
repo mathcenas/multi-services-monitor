@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { api } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
 
 export function Dashboard() {
   const [servers, setServers] = useState<DashboardServer[]>([]);
@@ -42,12 +42,18 @@ export function Dashboard() {
     setExpandedServers(newExpanded);
   };
 
+  const isDiskCritical = (service: Service): boolean => {
+    if (!service.disk_usage || !service.disk_threshold) return false;
+    return service.disk_usage >= service.disk_threshold;
+  };
+
   const getServerSummary = (server: DashboardServer) => {
     const down = server.services.filter(s => s.current_status === 'down' || s.current_status === 'inactive').length;
+    const diskCritical = server.services.filter(s => isDiskCritical(s)).length;
     const updates = server.services.filter(s => needsUpdate(s)).length;
     const active = server.services.filter(s => s.current_status === 'up' || s.current_status === 'active').length;
 
-    return { down, updates, active, total: server.services.length };
+    return { down, diskCritical, updates, active, total: server.services.length };
   };
 
   const compareVersions = (current: string, latest: string): number => {
@@ -74,6 +80,7 @@ export function Dashboard() {
     let totalServices = 0;
     let activeServices = 0;
     let downServices = 0;
+    let diskCritical = 0;
 
     servers.forEach(server => {
       server.services.forEach(service => {
@@ -83,10 +90,13 @@ export function Dashboard() {
         } else if (service.current_status === 'down' || service.current_status === 'inactive') {
           downServices++;
         }
+        if (isDiskCritical(service)) {
+          diskCritical++;
+        }
       });
     });
 
-    return { totalServices, activeServices, downServices };
+    return { totalServices, activeServices, downServices, diskCritical };
   };
 
   const stats = getOverallStats();
@@ -109,7 +119,7 @@ export function Dashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -145,6 +155,18 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Critical Disks</p>
+              <p className="text-3xl font-bold text-red-600">{stats.diskCritical}</p>
+            </div>
+            <div className="p-3 bg-red-100 rounded-lg">
+              <HardDrive size={24} className="text-red-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -156,7 +178,7 @@ export function Dashboard() {
           let badgeColor = 'bg-green-100 text-green-700';
           let statusIcon = <CheckCircle size={20} className="text-green-600" />;
 
-          if (summary.down > 0) {
+          if (summary.down > 0 || summary.diskCritical > 0) {
             statusColor = 'bg-red-50 border-red-200';
             badgeColor = 'bg-red-100 text-red-700';
             statusIcon = <XCircle size={20} className="text-red-600" />;
@@ -191,7 +213,13 @@ export function Dashboard() {
                         {summary.down} down
                       </span>
                     )}
-                    {summary.updates > 0 && summary.down === 0 && (
+                    {summary.diskCritical > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                        <HardDrive size={14} />
+                        {summary.diskCritical} disk{summary.diskCritical !== 1 ? 's' : ''} critical
+                      </span>
+                    )}
+                    {summary.updates > 0 && summary.down === 0 && summary.diskCritical === 0 && (
                       <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
                         {summary.updates} update{summary.updates > 1 ? 's' : ''}
                       </span>
@@ -212,15 +240,16 @@ export function Dashboard() {
                     {server.services.map(service => {
                       const isActive = service.current_status === 'up' || service.current_status === 'active';
                       const isDown = service.current_status === 'down' || service.current_status === 'inactive';
+                      const hasDiskCritical = isDiskCritical(service);
 
                       return (
                         <div
                           key={service.id}
                           className={`p-4 rounded-lg border-2 ${
-                            isActive
-                              ? 'border-green-200 bg-green-50'
-                              : isDown
+                            isDown || hasDiskCritical
                               ? 'border-red-200 bg-red-50'
+                              : isActive
+                              ? 'border-green-200 bg-green-50'
                               : 'border-gray-200 bg-gray-50'
                           }`}
                         >
@@ -228,6 +257,12 @@ export function Dashboard() {
                             <div className="flex-1">
                               <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
                               <div className="flex flex-wrap gap-1 mt-1">
+                                {hasDiskCritical && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                                    <HardDrive size={10} />
+                                    Disk Critical
+                                  </span>
+                                )}
                                 {service.current_version && (
                                   <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
                                     v{service.current_version}
@@ -246,7 +281,9 @@ export function Dashboard() {
                                 )}
                               </div>
                             </div>
-                            {isActive ? (
+                            {hasDiskCritical ? (
+                              <HardDrive size={20} className="text-red-600" />
+                            ) : isActive ? (
                               <CheckCircle size={20} className="text-green-600" />
                             ) : isDown ? (
                               <XCircle size={20} className="text-red-600" />
@@ -264,6 +301,20 @@ export function Dashboard() {
                                 <span className={isActive ? 'text-green-600' : isDown ? 'text-red-600' : 'text-gray-600'}>
                                   {service.current_status}
                                 </span>
+                              </div>
+                            )}
+                            {service.disk_usage !== undefined && service.disk_path && (
+                              <div>
+                                <span className="font-medium">Disk Usage:</span>{' '}
+                                <span className={hasDiskCritical ? 'text-red-600 font-semibold' : service.disk_usage >= 70 ? 'text-orange-600' : 'text-green-600'}>
+                                  {service.disk_usage.toFixed(1)}%
+                                </span>
+                                {' '}({service.disk_path})
+                              </div>
+                            )}
+                            {service.disk_used && service.disk_total && (
+                              <div>
+                                <span className="font-medium">Disk Space:</span> {service.disk_used} / {service.disk_total}
                               </div>
                             )}
                             {service.last_checked && (
