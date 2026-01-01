@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
 import { api } from '../api';
-import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle, HardDrive } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle, HardDrive, Info, Copy } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
 interface ServiceManagerProps {
@@ -17,6 +17,8 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [showAgentSetup, setShowAgentSetup] = useState(false);
+  const [expandedHelp, setExpandedHelp] = useState<number | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -98,6 +100,12 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
   const needsUpdate = (service: Service): boolean => {
     if (!service.current_version || !service.latest_version) return false;
     return compareVersions(service.current_version, service.latest_version) < 0;
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(label);
+    setTimeout(() => setCopiedText(null), 2000);
   };
 
   if (loading) {
@@ -443,21 +451,138 @@ sudo systemctl start monitor-agent`}
                       </div>
                     )}
                   </div>
+
+                  {expandedHelp === service.id && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Info size={16} className="text-blue-600" />
+                        Uptime Kuma Integration
+                      </h5>
+
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <p className="text-gray-700 mb-2 font-medium">1. Add a JSON Query Monitor in Uptime Kuma</p>
+                          <p className="text-gray-600 text-xs mb-2">Create a new monitor with these settings:</p>
+                          <div className="bg-white p-3 rounded border border-blue-100 space-y-2">
+                            <div>
+                              <span className="text-gray-500 text-xs">Monitor Type:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">JSON Query</code>
+                                <button
+                                  onClick={() => copyToClipboard('JSON Query', `type-${service.id}`)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                  title="Copy"
+                                >
+                                  {copiedText === `type-${service.id}` ? (
+                                    <span className="text-xs text-green-600">Copied!</span>
+                                  ) : (
+                                    <Copy size={14} className="text-gray-500" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 text-xs">URL:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1 break-all">
+                                  {window.location.origin}/api/health/service/{service.id}
+                                </code>
+                                <button
+                                  onClick={() => copyToClipboard(`${window.location.origin}/api/health/service/${service.id}`, `url-${service.id}`)}
+                                  className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                                  title="Copy URL"
+                                >
+                                  {copiedText === `url-${service.id}` ? (
+                                    <span className="text-xs text-green-600">Copied!</span>
+                                  ) : (
+                                    <Copy size={14} className="text-gray-500" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 text-xs">JSON Query:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">$.status</code>
+                                <button
+                                  onClick={() => copyToClipboard('$.status', `query-${service.id}`)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                  title="Copy JSON Query"
+                                >
+                                  {copiedText === `query-${service.id}` ? (
+                                    <span className="text-xs text-green-600">Copied!</span>
+                                  ) : (
+                                    <Copy size={14} className="text-gray-500" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 text-xs">Expected Value:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">up</code>
+                                <button
+                                  onClick={() => copyToClipboard('up', `expected-${service.id}`)}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                  title="Copy Expected Value"
+                                >
+                                  {copiedText === `expected-${service.id}` ? (
+                                    <span className="text-xs text-green-600">Copied!</span>
+                                  ) : (
+                                    <Copy size={14} className="text-gray-500" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-gray-700 mb-2 font-medium">2. API Response Example</p>
+                          <pre className="bg-white p-3 rounded border border-blue-100 text-xs overflow-auto">
+{`{
+  "status": "up",
+  "service": "${service.name}",
+  "server": "${server.name}",
+  "hostname": "${server.hostname}",
+  "message": "${service.current_message || 'Service is running'}",
+  "last_checked": "${service.last_checked || new Date().toISOString()}"
+}`}
+                          </pre>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                          <p className="text-xs text-yellow-800">
+                            <span className="font-semibold">Note:</span> Make sure the monitoring agent is running on your server to get live status updates.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2 ml-4">
+              <div className="flex flex-col gap-2 ml-4">
+                <button
+                  onClick={() => setExpandedHelp(expandedHelp === service.id ? null : service.id)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                  title="Uptime Kuma Integration"
+                >
+                  <Info size={16} className={expandedHelp === service.id ? "text-blue-600" : "text-gray-600"} />
+                </button>
                 <button
                   onClick={() => {
                     setEditingService(service);
                     setShowForm(true);
                   }}
                   className="p-1 hover:bg-gray-100 rounded"
+                  title="Edit Service"
                 >
                   <Edit2 size={16} className="text-gray-600" />
                 </button>
                 <button
                   onClick={() => handleDelete(service.id)}
                   className="p-1 hover:bg-gray-100 rounded"
+                  title="Delete Service"
                 >
                   <Trash2 size={16} className="text-red-600" />
                 </button>
