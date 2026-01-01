@@ -85,6 +85,10 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
               </div>
 
               <div className="space-y-3">
+                <div className="border-b border-gray-200 pb-2">
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Linux/Unix</p>
+                </div>
+
                 <div className="bg-white p-3 rounded border border-blue-100">
                   <p className="font-medium text-gray-900 mb-1">Systemd Service</p>
                   <div className="space-y-1 text-gray-700 font-mono text-xs">
@@ -104,42 +108,60 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                 </div>
 
                 <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">Process Check</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> mysql</p>
-                    <p><span className="text-gray-500">Type:</span> process</p>
-                    <p><span className="text-gray-500">Check Command:</span> pgrep mysqld</p>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">Custom URL Check</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> API Health</p>
-                    <p><span className="text-gray-500">Type:</span> custom</p>
-                    <p><span className="text-gray-500">Check Command:</span> curl -s https://api.example.com/health | grep -q "ok"</p>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded border border-blue-100">
                   <p className="font-medium text-gray-900 mb-1">File Server with Disk Monitoring</p>
                   <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> NAS (File Server R:)</p>
+                    <p><span className="text-gray-500">Name:</span> NAS Storage</p>
                     <p><span className="text-gray-500">Type:</span> custom</p>
                     <p><span className="text-gray-500">Check Command:</span> systemctl is-active smbd</p>
                     <p><span className="text-gray-500">Disk Path:</span> /mnt/nas</p>
                     <p><span className="text-gray-500">Threshold:</span> 90%</p>
                   </div>
-                  <p className="mt-2 text-xs text-blue-700 bg-blue-50 p-2 rounded">
-                    This creates 2 individual monitors: one for service status, one for disk usage
+                </div>
+
+                <div className="border-b border-gray-200 pb-2 pt-3">
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Windows</p>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-green-100">
+                  <p className="font-medium text-gray-900 mb-1">IIS Web Server</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> IIS</p>
+                    <p><span className="text-gray-500">Type:</span> custom</p>
+                    <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "W3SVC").Status -eq "Running"</p>
+                    <p><span className="text-gray-500">Disk Path:</span> C:\inetpub</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-green-100">
+                  <p className="font-medium text-gray-900 mb-1">SQL Server</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> SQL Server</p>
+                    <p><span className="text-gray-500">Type:</span> custom</p>
+                    <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "MSSQLSERVER").Status -eq "Running"</p>
+                    <p><span className="text-gray-500">Disk Path:</span> D:\SQLData</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-green-100">
+                  <p className="font-medium text-gray-900 mb-1">File Server</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> File Server (R: Drive)</p>
+                    <p><span className="text-gray-500">Type:</span> custom</p>
+                    <p><span className="text-gray-500">Check Command:</span> Test-Path "R:\" -PathType Container</p>
+                    <p><span className="text-gray-500">Disk Path:</span> R:\</p>
+                    <p><span className="text-gray-500">Threshold:</span> 85%</p>
+                  </div>
+                  <p className="mt-2 text-xs text-green-700 bg-green-50 p-2 rounded">
+                    Creates 2 monitors: service status + disk usage
                   </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-blue-200">
                 <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Note:</span> The check command runs on your server via the monitoring agent.
-                  It should return a success exit code (0) when the service is up. Adding a disk path creates a separate monitoring endpoint.
+                  <span className="font-semibold">Note:</span> Commands run on your server via the monitoring agent.
+                  Linux uses <code className="bg-gray-100 px-1">monitor-agent.sh</code>, Windows uses <code className="bg-gray-100 px-1">monitor-agent.ps1</code>.
+                  Adding a disk path creates a separate monitoring endpoint.
                 </p>
               </div>
             </div>

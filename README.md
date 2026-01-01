@@ -1,16 +1,19 @@
 # Service Monitor
 
-A web-based service monitoring system for managing and monitoring services across multiple Linux servers in different cloud environments.
+A web-based service monitoring system for managing and monitoring services across multiple servers (Linux and Windows) in different cloud environments.
 
 ## Features
 
-- **Server Management**: Add and manage multiple Linux servers
+- **Cross-Platform Support**: Monitor both Linux/Unix and Windows servers
+- **Server Management**: Add and manage multiple servers
 - **Service Configuration**: Define services to monitor with custom check commands
+- **Disk Space Monitoring**: Individual disk monitoring per service with customizable thresholds
 - **JSON Configuration Export**: Export monitoring configuration as JSON
 - **Monitoring Dashboard**: Real-time view of service status across all servers
 - **REST API**: Update service status from monitoring agents
 - **SQLite Database**: Lightweight, portable database
 - **Docker Ready**: Easy deployment with Docker
+- **Uptime Kuma Integration**: JSON endpoints for external monitoring tools
 
 ## Quick Start
 
@@ -68,42 +71,37 @@ This starts both the frontend (port 5178) and backend (port 3001).
 ### Dashboard
 - `GET /api/dashboard` - Get all servers and their service statuses
 
-## Linux Monitoring Agent
+## Monitoring Agents
 
-A sample monitoring script (`monitor-agent.sh`) is included to check services on your Linux servers and report back to the API.
+Two monitoring agents are included to check services on your servers and report back to the API:
 
-### Setup on Linux Server
+- **`monitor-agent.sh`** - For Linux/Unix servers (Bash)
+- **`monitor-agent.ps1`** - For Windows servers (PowerShell)
 
-1. Copy `monitor-agent.sh` to your Linux server
-2. Make it executable:
+### Quick Setup
+
+**Linux/Unix:**
 ```bash
-chmod +x monitor-agent.sh
+export MONITOR_API_URL="https://stats.cenas-support.com"
+export SERVER_ID="1"
+export CHECK_INTERVAL="60"
+./monitor-agent.sh
 ```
 
-3. Edit the script and set your API URL:
-```bash
-API_URL="http://your-monitor-server:3001/api"
+**Windows (PowerShell):**
+```powershell
+.\monitor-agent.ps1 -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -CheckInterval 60
 ```
 
-4. Install `jq` (required for JSON parsing):
-```bash
-# Ubuntu/Debian
-sudo apt-get install jq
+### Detailed Setup Instructions
 
-# CentOS/RHEL
-sudo yum install jq
-```
+For complete installation and configuration instructions, including:
+- Running as a system service (systemd/Windows Service)
+- Service check command examples
+- Disk monitoring configuration
+- Troubleshooting tips
 
-5. Run the script with your server ID:
-```bash
-./monitor-agent.sh 1
-```
-
-6. Set up a cron job to run it periodically:
-```bash
-# Run every 5 minutes
-*/5 * * * * /path/to/monitor-agent.sh 1
-```
+**See the complete setup guide:** [MONITOR-AGENT-SETUP.md](./MONITOR-AGENT-SETUP.md)
 
 ## Configuration Examples
 
@@ -122,30 +120,63 @@ Through the web UI:
 
 For each server, add the services you want to monitor:
 
+#### Linux/Unix Services
+
 **Apache2**
 - Name: apache2
 - Type: systemd
 - Check Command: `systemctl is-active apache2`
+- Disk Path: `/var/www` (optional)
 
-**Samba**
+**Samba File Server**
 - Name: smbd
 - Type: systemd
 - Check Command: `systemctl is-active smbd`
+- Disk Path: `/mnt/nas`
+- Threshold: 90%
 
 **MySQL**
 - Name: mysql
 - Type: systemd
 - Check Command: `systemctl is-active mysql`
+- Disk Path: `/var/lib/mysql`
 
 **Docker Container**
 - Name: myapp
 - Type: docker
-- Check Command: `docker ps | grep myapp`
+- Check Command: `docker ps --filter name=myapp --filter status=running -q`
 
 **Custom Process**
 - Name: custom-app
 - Type: process
 - Check Command: `pgrep -f custom-app`
+
+#### Windows Services
+
+**IIS Web Server**
+- Name: IIS
+- Type: custom
+- Check Command: `(Get-Service -Name "W3SVC").Status -eq "Running"`
+- Disk Path: `C:\inetpub`
+
+**SQL Server**
+- Name: SQL Server
+- Type: custom
+- Check Command: `(Get-Service -Name "MSSQLSERVER").Status -eq "Running"`
+- Disk Path: `D:\SQLData`
+- Threshold: 85%
+
+**File Server**
+- Name: File Server (R: Drive)
+- Type: custom
+- Check Command: `Test-Path "R:\" -PathType Container`
+- Disk Path: `R:\`
+- Threshold: 90%
+
+**Windows Service**
+- Name: Windows Update
+- Type: custom
+- Check Command: `(Get-Service -Name "wuauserv").Status -eq "Running"`
 
 ## Database
 
