@@ -73,10 +73,11 @@ This starts both the frontend (port 5178) and backend (port 3001).
 
 ## Monitoring Agents
 
-Two monitoring agents are included to check services on your servers and report back to the API:
+Three monitoring agents are included to check services and report back to the API:
 
 - **`monitor-agent.sh`** - For Linux/Unix servers (Bash)
 - **`monitor-agent.ps1`** - For Windows servers (PowerShell)
+- **`monitor-agent-mikrotik.sh`** - For MikroTik RouterOS devices (via SSH)
 
 ### Quick Setup
 
@@ -93,12 +94,25 @@ export CHECK_INTERVAL="60"
 .\monitor-agent.ps1 -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -CheckInterval 60
 ```
 
+**MikroTik RouterOS:**
+```bash
+export MONITOR_API_URL="https://stats.cenas-support.com"
+export SERVER_ID="2"
+export SERVER_NAME="mikrotik-router"
+export MIKROTIK_HOST="192.168.88.1"
+export MIKROTIK_USER="admin"
+export MIKROTIK_KEY="/root/.ssh/mikrotik_monitor"
+./monitor-agent-mikrotik.sh
+```
+
 ### Detailed Setup Instructions
 
 For complete installation and configuration instructions, including:
 - Running as a system service (systemd/Windows Service)
 - Service check command examples
 - Disk monitoring configuration
+- MikroTik SSH setup and monitoring
+- CPU/RAM threshold configuration
 - Troubleshooting tips
 
 **See the complete setup guide:** [MONITOR-AGENT-SETUP.md](./MONITOR-AGENT-SETUP.md)
@@ -177,6 +191,39 @@ For each server, add the services you want to monitor:
 - Name: Windows Update
 - Type: custom
 - Check Command: `(Get-Service -Name "wuauserv").Status -eq "Running"`
+
+#### MikroTik RouterOS
+
+MikroTik monitoring is handled automatically by the `monitor-agent-mikrotik.sh` script which monitors:
+- **System Resources** (CPU, RAM, uptime, temperature) - Monitored automatically
+- **RouterOS Version** - Detected automatically
+- **Network Interfaces** - Add as services in dashboard
+- **IP Services** - Add as services in dashboard
+
+**Monitor Network Interface:**
+- Name: ether1
+- Type: interface
+- Check Command: `ether1`
+
+**Monitor WAN Connection:**
+- Name: PPPoE WAN
+- Type: interface
+- Check Command: `pppoe-out1`
+
+**Monitor SSH Service:**
+- Name: SSH Service
+- Type: service
+- Check Command: `ssh`
+
+**Monitor API Service:**
+- Name: API
+- Type: service
+- Check Command: `api`
+
+**Custom RouterOS Command:**
+- Name: Active Connections
+- Type: custom
+- Check Command: `/ip firewall connection print count-only`
 
 ## Database
 

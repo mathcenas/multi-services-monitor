@@ -1,14 +1,170 @@
 # Monitor Agent Setup Guide
 
-This guide explains how to install and configure the monitoring agent on both Linux/Unix and Windows servers.
+This guide explains how to install and configure the monitoring agent on Linux/Unix servers, Windows servers, and MikroTik devices.
 
 ## Overview
 
-The monitoring agent is a lightweight script that runs on your servers to:
+The monitoring agents are lightweight scripts that run to monitor your infrastructure:
 - Check service status
 - Monitor disk space usage
+- Monitor CPU and RAM usage (MikroTik)
 - Report version information
 - Send status updates to the dashboard
+
+**Available Agents:**
+- `monitor-agent.sh` - Linux/Unix servers
+- `monitor-agent.ps1` - Windows servers
+- `monitor-agent-mikrotik.sh` - MikroTik RouterOS devices
+
+---
+
+## MikroTik RouterOS Monitoring
+
+Monitor MikroTik routers and switches via SSH connection. This agent can monitor system resources (CPU, RAM, temperature), interfaces, and services.
+
+### Prerequisites
+- SSH access enabled on the MikroTik device
+- `curl` and `jq` installed on the machine running the agent
+- SSH key-based authentication (recommended) or password authentication
+
+### Enable SSH on MikroTik
+
+Connect to your MikroTik via Winbox or terminal:
+
+```routeros
+/ip service enable ssh
+/ip service set ssh port=22
+```
+
+### Setup SSH Key Authentication (Recommended)
+
+1. **Generate SSH key on monitoring machine:**
+   ```bash
+   ssh-keygen -t rsa -b 2048 -f ~/.ssh/mikrotik_monitor
+   ```
+
+2. **Upload public key to MikroTik:**
+   ```bash
+   scp ~/.ssh/mikrotik_monitor.pub admin@192.168.88.1:/
+   ```
+
+3. **Import key on MikroTik:**
+   ```routeros
+   /user ssh-keys import public-key-file=mikrotik_monitor.pub user=admin
+   /file remove mikrotik_monitor.pub
+   ```
+
+### Installation Steps
+
+1. **Download the MikroTik monitoring agent:**
+   ```bash
+   curl -o monitor-agent-mikrotik.sh https://your-dashboard-url.com/monitor-agent-mikrotik.sh
+   chmod +x monitor-agent-mikrotik.sh
+   ```
+
+2. **Configure environment variables:**
+   ```bash
+   export MONITOR_API_URL="https://stats.cenas-support.com"
+   export SERVER_ID="2"
+   export SERVER_NAME="mikrotik-router"
+   export MIKROTIK_HOST="192.168.88.1"
+   export MIKROTIK_PORT="22"
+   export MIKROTIK_USER="admin"
+   export MIKROTIK_KEY="/root/.ssh/mikrotik_monitor"
+   export CHECK_INTERVAL="60"
+   export CPU_WARNING="70"
+   export CPU_CRITICAL="90"
+   export RAM_WARNING="70"
+   export RAM_CRITICAL="90"
+   ```
+
+3. **Test the connection:**
+   ```bash
+   ssh -i ~/.ssh/mikrotik_monitor admin@192.168.88.1 "/system resource print"
+   ```
+
+4. **Run the agent:**
+   ```bash
+   ./monitor-agent-mikrotik.sh
+   ```
+
+5. **Run as a systemd service:**
+
+   Create `/etc/systemd/system/monitor-mikrotik.service`:
+   ```ini
+   [Unit]
+   Description=MikroTik Monitoring Agent
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=root
+   Environment="MONITOR_API_URL=https://stats.cenas-support.com"
+   Environment="SERVER_ID=2"
+   Environment="SERVER_NAME=mikrotik-router"
+   Environment="MIKROTIK_HOST=192.168.88.1"
+   Environment="MIKROTIK_PORT=22"
+   Environment="MIKROTIK_USER=admin"
+   Environment="MIKROTIK_KEY=/root/.ssh/mikrotik_monitor"
+   Environment="CHECK_INTERVAL=60"
+   Environment="CPU_WARNING=70"
+   Environment="CPU_CRITICAL=90"
+   Environment="RAM_WARNING=70"
+   Environment="RAM_CRITICAL=90"
+   ExecStart=/opt/monitor-agent/monitor-agent-mikrotik.sh
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   Enable and start:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable monitor-mikrotik
+   sudo systemctl start monitor-mikrotik
+   sudo systemctl status monitor-mikrotik
+   ```
+
+### What Gets Monitored
+
+**Automatic System Monitoring:**
+- CPU Load (percentage)
+- RAM Usage (percentage and MB)
+- System Uptime
+- RouterOS Version
+- Board Name/Model
+- Temperature (if supported by hardware)
+- Voltage (if supported by hardware)
+
+**Configurable Service Monitoring:**
+Add services in the dashboard to monitor:
+- Network interfaces
+- IP services (SSH, Telnet, FTP, etc.)
+- Custom RouterOS commands
+
+### MikroTik Service Examples
+
+Add these services in the web dashboard for your MikroTik server:
+
+| Service Name | Type | Check Command | Description |
+|-------------|------|---------------|-------------|
+| ether1 Interface | interface | ether1 | Monitor physical interface status |
+| WAN Interface | interface | pppoe-out1 | Monitor PPPoE connection |
+| SSH Service | service | ssh | Check if SSH service is enabled |
+| API Service | service | api | Check if API service is enabled |
+| Custom Check | custom | /system resource print \| grep uptime | Any RouterOS command |
+
+### Thresholds
+
+You can customize warning and critical thresholds:
+- `CPU_WARNING=70` - CPU warning at 70%
+- `CPU_CRITICAL=90` - CPU critical at 90%
+- `RAM_WARNING=70` - RAM warning at 70%
+- `RAM_CRITICAL=90` - RAM critical at 90%
+
+---
 
 ## Linux/Unix Installation
 

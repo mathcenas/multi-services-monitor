@@ -155,12 +155,48 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                     Creates 2 monitors: service status + disk usage
                   </p>
                 </div>
+
+                <div className="border-b border-gray-200 pb-2 pt-4">
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">MikroTik RouterOS</p>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-orange-100">
+                  <p className="font-medium text-gray-900 mb-1">Network Interface</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> WAN Interface</p>
+                    <p><span className="text-gray-500">Type:</span> interface</p>
+                    <p><span className="text-gray-500">Check Command:</span> ether1</p>
+                  </div>
+                  <p className="mt-2 text-xs text-orange-700 bg-orange-50 p-2 rounded">
+                    System resources (CPU, RAM, temp) monitored automatically
+                  </p>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-orange-100">
+                  <p className="font-medium text-gray-900 mb-1">PPPoE Connection</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> PPPoE WAN</p>
+                    <p><span className="text-gray-500">Type:</span> interface</p>
+                    <p><span className="text-gray-500">Check Command:</span> pppoe-out1</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-orange-100">
+                  <p className="font-medium text-gray-900 mb-1">SSH Service</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> SSH Service</p>
+                    <p><span className="text-gray-500">Type:</span> service</p>
+                    <p><span className="text-gray-500">Check Command:</span> ssh</p>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-2 border-t border-blue-200">
                 <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Note:</span> Commands run on your server via the monitoring agent.
-                  Linux uses <code className="bg-gray-100 px-1">monitor-agent.sh</code>, Windows uses <code className="bg-gray-100 px-1">monitor-agent.ps1</code>.
+                  <span className="font-semibold">Note:</span> Commands run via monitoring agents:
+                  Linux: <code className="bg-gray-100 px-1">monitor-agent.sh</code>,
+                  Windows: <code className="bg-gray-100 px-1">monitor-agent.ps1</code>,
+                  MikroTik: <code className="bg-gray-100 px-1">monitor-agent-mikrotik.sh</code> (via SSH).
                   Adding a disk path creates a separate monitoring endpoint.
                 </p>
               </div>
