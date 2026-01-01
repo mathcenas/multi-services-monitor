@@ -275,6 +275,116 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
+app.get('/api/health/server/:serverId', (req, res) => {
+  try {
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.serverId) as any;
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    const services = db.prepare(`
+      SELECT s.id, s.name,
+        ss.status as current_status
+      FROM services s
+      LEFT JOIN service_status ss ON s.id = ss.service_id
+        AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
+      WHERE s.server_id = ?
+      ORDER BY s.name
+    `).all(req.params.serverId) as any[];
+
+    const servicesDown = services.filter(s => s.current_status === 'down');
+    const totalServices = services.length;
+    const healthyServices = totalServices - servicesDown.length;
+
+    res.json({
+      status: servicesDown.length === 0 ? 'healthy' : 'unhealthy',
+      server: server.name,
+      hostname: server.hostname,
+      total_services: totalServices,
+      healthy_services: healthyServices,
+      down_services: servicesDown.length,
+      services_down: servicesDown.map(s => s.name)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check server health' });
+  }
+});
+
+app.get('/api/health/all', (req, res) => {
+  try {
+    const servers = db.prepare('SELECT * FROM servers ORDER BY name').all() as any[];
+
+    const results = servers.map((server: any) => {
+      const services = db.prepare(`
+        SELECT s.id, s.name,
+          ss.status as current_status
+        FROM services s
+        LEFT JOIN service_status ss ON s.id = ss.service_id
+          AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
+        WHERE s.server_id = ?
+      `).all(server.id) as any[];
+
+      const servicesDown = services.filter(s => s.current_status === 'down');
+
+      return {
+        server_id: server.id,
+        server: server.name,
+        hostname: server.hostname,
+        status: servicesDown.length === 0 ? 'healthy' : 'unhealthy',
+        total_services: services.length,
+        down_services: servicesDown.length,
+        services_down: servicesDown.map(s => s.name)
+      };
+    });
+
+    const totalServers = results.length;
+    const healthyServers = results.filter(r => r.status === 'healthy').length;
+    const totalServicesDown = results.reduce((sum, r) => sum + r.down_services, 0);
+
+    res.json({
+      status: totalServicesDown === 0 ? 'healthy' : 'unhealthy',
+      total_servers: totalServers,
+      healthy_servers: healthyServers,
+      unhealthy_servers: totalServers - healthyServers,
+      total_services_down: totalServicesDown,
+      servers: results
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check health' });
+  }
+});
+
+app.get('/api/health/service/:serviceId', (req, res) => {
+  try {
+    const service = db.prepare(`
+      SELECT s.*, srv.name as server_name, srv.hostname,
+        ss.status as current_status,
+        ss.message as current_message,
+        ss.checked_at as last_checked
+      FROM services s
+      JOIN servers srv ON s.server_id = srv.id
+      LEFT JOIN service_status ss ON s.id = ss.service_id
+        AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
+      WHERE s.id = ?
+    `).get(req.params.serviceId) as any;
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    res.json({
+      status: service.current_status || 'unknown',
+      service: service.name,
+      server: service.server_name,
+      hostname: service.hostname,
+      message: service.current_message,
+      last_checked: service.last_checked
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check service health' });
+  }
+});
+
 app.get('/monitor-agent.sh', (req, res) => {
   try {
     const scriptPath = path.join(__dirname, 'monitor-agent.sh');
