@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Service } from '../types';
 import { api } from '../api';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 
 interface ServiceFormProps {
   serverId: number;
@@ -19,6 +19,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
     disk_threshold: 80,
   });
   const [saving, setSaving] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (service) {
@@ -54,7 +55,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-900">
             {service ? 'Edit Service' : 'Add Service'}
@@ -65,6 +66,81 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
           >
             <X size={20} className="text-gray-500" />
           </button>
+        </div>
+
+        <div className="px-6 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowHelp(!showHelp)}
+            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <Info size={16} />
+            {showHelp ? 'Hide' : 'Show'} Examples
+          </button>
+
+          {showHelp && (
+            <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200 text-sm space-y-3">
+              <div>
+                <p className="font-semibold text-gray-900 mb-2">Service Examples:</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-white p-3 rounded border border-blue-100">
+                  <p className="font-medium text-gray-900 mb-1">Systemd Service</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> apache2</p>
+                    <p><span className="text-gray-500">Type:</span> systemd</p>
+                    <p><span className="text-gray-500">Check Command:</span> systemctl is-active apache2</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-100">
+                  <p className="font-medium text-gray-900 mb-1">Docker Container</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> nginx</p>
+                    <p><span className="text-gray-500">Type:</span> docker</p>
+                    <p><span className="text-gray-500">Check Command:</span> docker ps --filter name=nginx --filter status=running -q</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-100">
+                  <p className="font-medium text-gray-900 mb-1">Process Check</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> mysql</p>
+                    <p><span className="text-gray-500">Type:</span> process</p>
+                    <p><span className="text-gray-500">Check Command:</span> pgrep mysqld</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-100">
+                  <p className="font-medium text-gray-900 mb-1">Custom URL Check</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> API Health</p>
+                    <p><span className="text-gray-500">Type:</span> custom</p>
+                    <p><span className="text-gray-500">Check Command:</span> curl -s https://api.example.com/health | grep -q "ok"</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-100">
+                  <p className="font-medium text-gray-900 mb-1">File Server</p>
+                  <div className="space-y-1 text-gray-700 font-mono text-xs">
+                    <p><span className="text-gray-500">Name:</span> NAS (File Server R:)</p>
+                    <p><span className="text-gray-500">Type:</span> custom</p>
+                    <p><span className="text-gray-500">Check Command:</span> systemctl is-active smbd</p>
+                    <p><span className="text-gray-500">Disk Path:</span> /mnt/nas</p>
+                    <p><span className="text-gray-500">Threshold:</span> 80%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-blue-200">
+                <p className="text-xs text-gray-600">
+                  <span className="font-semibold">Note:</span> The check command runs on your server via the monitoring agent.
+                  It should return a success exit code (0) when the service is up.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
