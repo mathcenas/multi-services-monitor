@@ -385,6 +385,49 @@ app.get('/api/health/service/:serviceId', (req, res) => {
   }
 });
 
+app.get('/api/health/disk/:serviceId', (req, res) => {
+  try {
+    const service = db.prepare(`
+      SELECT s.*, srv.name as server_name, srv.hostname,
+        ss.checked_at as last_checked
+      FROM services s
+      JOIN servers srv ON s.server_id = srv.id
+      LEFT JOIN service_status ss ON s.id = ss.service_id
+        AND ss.id = (SELECT MAX(id) FROM service_status WHERE service_id = s.id)
+      WHERE s.id = ?
+    `).get(req.params.serviceId) as any;
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    if (!service.disk_path) {
+      return res.status(400).json({ error: 'Service does not have disk monitoring configured' });
+    }
+
+    const threshold = service.disk_threshold || 80;
+    const usage = service.disk_usage || 0;
+    const status = usage >= threshold ? 'critical' : usage >= (threshold * 0.8) ? 'warning' : 'ok';
+
+    res.json({
+      status: status,
+      service: service.name,
+      server: service.server_name,
+      hostname: service.hostname,
+      disk_path: service.disk_path,
+      disk_usage: service.disk_usage,
+      disk_total: service.disk_total,
+      disk_used: service.disk_used,
+      disk_available: service.disk_available,
+      disk_threshold: threshold,
+      message: `Disk usage at ${service.disk_usage}% (threshold: ${threshold}%)`,
+      last_checked: service.last_checked
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check disk health' });
+  }
+});
+
 app.get('/monitor-agent.sh', (req, res) => {
   try {
     const scriptPath = path.join(__dirname, 'monitor-agent.sh');

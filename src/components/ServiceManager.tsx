@@ -459,21 +459,24 @@ sudo systemctl start monitor-agent`}
                         Uptime Kuma Integration
                       </h5>
 
-                      <div className="space-y-4 text-sm">
+                      <div className="space-y-6 text-sm">
                         <div>
-                          <p className="text-gray-700 mb-2 font-medium">1. Add a JSON Query Monitor in Uptime Kuma</p>
-                          <p className="text-gray-600 text-xs mb-2">Create a new monitor with these settings:</p>
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle size={16} className="text-green-600" />
+                            <p className="text-gray-700 font-semibold">Service Status Monitor</p>
+                          </div>
+                          <p className="text-gray-600 text-xs mb-2">Monitor if this service is running:</p>
                           <div className="bg-white p-3 rounded border border-blue-100 space-y-2">
                             <div>
                               <span className="text-gray-500 text-xs">Monitor Type:</span>
                               <div className="flex items-center gap-2 mt-1">
                                 <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">JSON Query</code>
                                 <button
-                                  onClick={() => copyToClipboard('JSON Query', `type-${service.id}`)}
+                                  onClick={() => copyToClipboard('JSON Query', `type-service-${service.id}`)}
                                   className="p-1 hover:bg-gray-100 rounded"
                                   title="Copy"
                                 >
-                                  {copiedText === `type-${service.id}` ? (
+                                  {copiedText === `type-service-${service.id}` ? (
                                     <span className="text-xs text-green-600">Copied!</span>
                                   ) : (
                                     <Copy size={14} className="text-gray-500" />
@@ -488,11 +491,11 @@ sudo systemctl start monitor-agent`}
                                   {window.location.origin}/api/health/service/{service.id}
                                 </code>
                                 <button
-                                  onClick={() => copyToClipboard(`${window.location.origin}/api/health/service/${service.id}`, `url-${service.id}`)}
+                                  onClick={() => copyToClipboard(`${window.location.origin}/api/health/service/${service.id}`, `url-service-${service.id}`)}
                                   className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
                                   title="Copy URL"
                                 >
-                                  {copiedText === `url-${service.id}` ? (
+                                  {copiedText === `url-service-${service.id}` ? (
                                     <span className="text-xs text-green-600">Copied!</span>
                                   ) : (
                                     <Copy size={14} className="text-gray-500" />
@@ -505,11 +508,11 @@ sudo systemctl start monitor-agent`}
                               <div className="flex items-center gap-2 mt-1">
                                 <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">$.status</code>
                                 <button
-                                  onClick={() => copyToClipboard('$.status', `query-${service.id}`)}
+                                  onClick={() => copyToClipboard('$.status', `query-service-${service.id}`)}
                                   className="p-1 hover:bg-gray-100 rounded"
                                   title="Copy JSON Query"
                                 >
-                                  {copiedText === `query-${service.id}` ? (
+                                  {copiedText === `query-service-${service.id}` ? (
                                     <span className="text-xs text-green-600">Copied!</span>
                                   ) : (
                                     <Copy size={14} className="text-gray-500" />
@@ -522,11 +525,11 @@ sudo systemctl start monitor-agent`}
                               <div className="flex items-center gap-2 mt-1">
                                 <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">up</code>
                                 <button
-                                  onClick={() => copyToClipboard('up', `expected-${service.id}`)}
+                                  onClick={() => copyToClipboard('up', `expected-service-${service.id}`)}
                                   className="p-1 hover:bg-gray-100 rounded"
                                   title="Copy Expected Value"
                                 >
-                                  {copiedText === `expected-${service.id}` ? (
+                                  {copiedText === `expected-service-${service.id}` ? (
                                     <span className="text-xs text-green-600">Copied!</span>
                                   ) : (
                                     <Copy size={14} className="text-gray-500" />
@@ -535,11 +538,9 @@ sudo systemctl start monitor-agent`}
                               </div>
                             </div>
                           </div>
-                        </div>
-
-                        <div>
-                          <p className="text-gray-700 mb-2 font-medium">2. API Response Example</p>
-                          <pre className="bg-white p-3 rounded border border-blue-100 text-xs overflow-auto">
+                          <details className="mt-2">
+                            <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">View API Response Example</summary>
+                            <pre className="bg-white p-3 rounded border border-blue-100 text-xs overflow-auto mt-2">
 {`{
   "status": "up",
   "service": "${service.name}",
@@ -548,8 +549,115 @@ sudo systemctl start monitor-agent`}
   "message": "${service.current_message || 'Service is running'}",
   "last_checked": "${service.last_checked || new Date().toISOString()}"
 }`}
-                          </pre>
+                            </pre>
+                          </details>
                         </div>
+
+                        {service.disk_path && (
+                          <div className="border-t border-blue-200 pt-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <HardDrive size={16} className="text-orange-600" />
+                              <p className="text-gray-700 font-semibold">Disk Usage Monitor</p>
+                            </div>
+                            <p className="text-gray-600 text-xs mb-2">Monitor disk space for: {service.disk_path}</p>
+                            <div className="bg-white p-3 rounded border border-blue-100 space-y-2">
+                              <div>
+                                <span className="text-gray-500 text-xs">Monitor Type:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">JSON Query</code>
+                                  <button
+                                    onClick={() => copyToClipboard('JSON Query', `type-disk-${service.id}`)}
+                                    className="p-1 hover:bg-gray-100 rounded"
+                                    title="Copy"
+                                  >
+                                    {copiedText === `type-disk-${service.id}` ? (
+                                      <span className="text-xs text-green-600">Copied!</span>
+                                    ) : (
+                                      <Copy size={14} className="text-gray-500" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-xs">URL:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1 break-all">
+                                    {window.location.origin}/api/health/disk/{service.id}
+                                  </code>
+                                  <button
+                                    onClick={() => copyToClipboard(`${window.location.origin}/api/health/disk/${service.id}`, `url-disk-${service.id}`)}
+                                    className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                                    title="Copy URL"
+                                  >
+                                    {copiedText === `url-disk-${service.id}` ? (
+                                      <span className="text-xs text-green-600">Copied!</span>
+                                    ) : (
+                                      <Copy size={14} className="text-gray-500" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-xs">JSON Query:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">$.status</code>
+                                  <button
+                                    onClick={() => copyToClipboard('$.status', `query-disk-${service.id}`)}
+                                    className="p-1 hover:bg-gray-100 rounded"
+                                    title="Copy JSON Query"
+                                  >
+                                    {copiedText === `query-disk-${service.id}` ? (
+                                      <span className="text-xs text-green-600">Copied!</span>
+                                    ) : (
+                                      <Copy size={14} className="text-gray-500" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 text-xs">Expected Value:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900 flex-1">ok</code>
+                                  <button
+                                    onClick={() => copyToClipboard('ok', `expected-disk-${service.id}`)}
+                                    className="p-1 hover:bg-gray-100 rounded"
+                                    title="Copy Expected Value"
+                                  >
+                                    {copiedText === `expected-disk-${service.id}` ? (
+                                      <span className="text-xs text-green-600">Copied!</span>
+                                    ) : (
+                                      <Copy size={14} className="text-gray-500" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                              <p className="text-orange-800">
+                                <span className="font-semibold">Status Values:</span> ok (under {(service.disk_threshold || 80) * 0.8}%) | warning ({(service.disk_threshold || 80) * 0.8}-{service.disk_threshold || 80}%) | critical (over {service.disk_threshold || 80}%)
+                              </p>
+                            </div>
+                            <details className="mt-2">
+                              <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">View API Response Example</summary>
+                              <pre className="bg-white p-3 rounded border border-blue-100 text-xs overflow-auto mt-2">
+{`{
+  "status": "ok",
+  "service": "${service.name}",
+  "server": "${server.name}",
+  "hostname": "${server.hostname}",
+  "disk_path": "${service.disk_path}",
+  "disk_usage": ${service.disk_usage || 45},
+  "disk_total": "${service.disk_total || '100G'}",
+  "disk_used": "${service.disk_used || '45G'}",
+  "disk_available": "${service.disk_available || '55G'}",
+  "disk_threshold": ${service.disk_threshold || 80},
+  "message": "Disk usage at ${service.disk_usage || 45}% (threshold: ${service.disk_threshold || 80}%)",
+  "last_checked": "${service.last_checked || new Date().toISOString()}"
+}`}
+                              </pre>
+                            </details>
+                          </div>
+                        )}
 
                         <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                           <p className="text-xs text-yellow-800">
