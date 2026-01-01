@@ -122,21 +122,24 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                 </div>
 
                 <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">File Server</p>
+                  <p className="font-medium text-gray-900 mb-1">File Server with Disk Monitoring</p>
                   <div className="space-y-1 text-gray-700 font-mono text-xs">
                     <p><span className="text-gray-500">Name:</span> NAS (File Server R:)</p>
                     <p><span className="text-gray-500">Type:</span> custom</p>
                     <p><span className="text-gray-500">Check Command:</span> systemctl is-active smbd</p>
                     <p><span className="text-gray-500">Disk Path:</span> /mnt/nas</p>
-                    <p><span className="text-gray-500">Threshold:</span> 80%</p>
+                    <p><span className="text-gray-500">Threshold:</span> 90%</p>
                   </div>
+                  <p className="mt-2 text-xs text-blue-700 bg-blue-50 p-2 rounded">
+                    This creates 2 individual monitors: one for service status, one for disk usage
+                  </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-blue-200">
                 <p className="text-xs text-gray-600">
                   <span className="font-semibold">Note:</span> The check command runs on your server via the monitoring agent.
-                  It should return a success exit code (0) when the service is up.
+                  It should return a success exit code (0) when the service is up. Adding a disk path creates a separate monitoring endpoint.
                 </p>
               </div>
             </div>
@@ -205,30 +208,43 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
           </div>
 
           <div className="border-t border-gray-200 pt-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">
-              Disk Space Monitoring
-            </h4>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Individual Disk Space Monitoring
+                </h4>
+                <p className="text-xs text-gray-500 mt-1">
+                  Creates a separate monitoring endpoint for disk usage
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-xs text-blue-800">
+                <span className="font-semibold">Optional:</span> Enable this to create an individual disk monitoring card with its own JSON query endpoint for Uptime Kuma. This allows you to monitor service status and disk space separately.
+              </p>
+            </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Disk Path
+                  Disk Path (Optional)
                 </label>
                 <input
                   type="text"
                   value={formData.disk_path}
                   onChange={(e) => setFormData({ ...formData, disk_path: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="/var/lib/mysql or /mnt/data"
+                  placeholder="/var/lib/mysql, /mnt/data, or /"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Path to monitor for disk usage
+                  Leave empty to skip disk monitoring. Enter a path to create an individual disk monitor.
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Warning Threshold (%)
+                  Critical Threshold (%)
                 </label>
                 <input
                   type="number"
@@ -239,7 +255,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Alert when disk usage exceeds this percentage
+                  Status: OK (below {Math.round((formData.disk_threshold || 80) * 0.8)}%) | Warning ({Math.round((formData.disk_threshold || 80) * 0.8)}-{formData.disk_threshold}%) | Critical (above {formData.disk_threshold}%)
                 </p>
               </div>
             </div>
