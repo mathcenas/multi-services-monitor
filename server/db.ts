@@ -60,4 +60,23 @@ if (columnExists.count === 0) {
   console.log('Migration completed: current_version column added');
 }
 
+const diskPathExists = db.prepare(`
+  SELECT COUNT(*) as count
+  FROM pragma_table_info('services')
+  WHERE name = 'disk_path'
+`).get() as { count: number };
+
+if (diskPathExists.count === 0) {
+  console.log('Adding disk monitoring columns to services table...');
+  db.exec(`
+    ALTER TABLE services ADD COLUMN disk_path TEXT;
+    ALTER TABLE services ADD COLUMN disk_threshold INTEGER DEFAULT 80;
+    ALTER TABLE services ADD COLUMN disk_usage INTEGER;
+    ALTER TABLE services ADD COLUMN disk_total TEXT;
+    ALTER TABLE services ADD COLUMN disk_used TEXT;
+    ALTER TABLE services ADD COLUMN disk_available TEXT;
+  `);
+  console.log('Migration completed: disk monitoring columns added');
+}
+
 export default db;

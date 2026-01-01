@@ -94,6 +94,7 @@ app.get('/api/servers/:serverId/services', async (req, res) => {
     const services = db.prepare(`
       SELECT s.id, s.server_id, s.name, s.type, s.check_command, s.description,
         s.current_version, s.created_at, s.updated_at,
+        s.disk_path, s.disk_threshold, s.disk_usage, s.disk_total, s.disk_used, s.disk_available,
         ss.status as current_status,
         ss.message as current_message,
         ss.checked_at as last_checked
@@ -125,7 +126,7 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
     }
 
     const services = db.prepare(`
-      SELECT name, type, check_command, description
+      SELECT name, type, check_command, description, disk_path, disk_threshold
       FROM services
       WHERE server_id = ?
       ORDER BY name
@@ -146,11 +147,11 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
 
 app.post('/api/servers/:serverId/services', (req, res) => {
   try {
-    const { name, type, check_command, description } = req.body;
+    const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
     const result = db.prepare(`
-      INSERT INTO services (server_id, name, type, check_command, description)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(req.params.serverId, name, type || 'systemd', check_command, description);
+      INSERT INTO services (server_id, name, type, check_command, description, disk_path, disk_threshold)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(req.params.serverId, name, type || 'systemd', check_command, description, disk_path || null, disk_threshold || 80);
 
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(service);
@@ -161,12 +162,12 @@ app.post('/api/servers/:serverId/services', (req, res) => {
 
 app.put('/api/services/:id', (req, res) => {
   try {
-    const { name, type, check_command, description } = req.body;
+    const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
     db.prepare(`
       UPDATE services
-      SET name = ?, type = ?, check_command = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, type = ?, check_command = ?, description = ?, disk_path = ?, disk_threshold = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name, type, check_command, description, req.params.id);
+    `).run(name, type, check_command, description, disk_path || null, disk_threshold || 80, req.params.id);
 
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
     res.json(service);
@@ -186,7 +187,7 @@ app.delete('/api/services/:id', (req, res) => {
 
 app.post('/api/status', (req, res) => {
   try {
-    const { server_name, service_name, status, message, version } = req.body;
+    const { server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
 
     const server = db.prepare('SELECT id FROM servers WHERE name = ?').get(server_name) as any;
     if (!server) {
@@ -198,12 +199,27 @@ app.post('/api/status', (req, res) => {
       return res.status(404).json({ error: 'Service not found' });
     }
 
+    const updates: string[] = [];
+    const values: any[] = [];
+
     if (version) {
+      updates.push('current_version = ?');
+      values.push(version);
+    }
+
+    if (disk_usage !== undefined) {
+      updates.push('disk_usage = ?', 'disk_total = ?', 'disk_used = ?', 'disk_available = ?');
+      values.push(disk_usage, disk_total, disk_used, disk_available);
+    }
+
+    if (updates.length > 0) {
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(service.id);
       db.prepare(`
         UPDATE services
-        SET current_version = ?, updated_at = CURRENT_TIMESTAMP
+        SET ${updates.join(', ')}
         WHERE id = ?
-      `).run(version, service.id);
+      `).run(...values);
     }
 
     db.prepare(`
@@ -231,6 +247,7 @@ app.get('/api/dashboard', async (req, res) => {
       const services = db.prepare(`
         SELECT s.id, s.server_id, s.name, s.type, s.check_command, s.description,
           s.current_version, s.created_at, s.updated_at,
+          s.disk_path, s.disk_threshold, s.disk_usage, s.disk_total, s.disk_used, s.disk_available,
           ss.status as current_status,
           ss.message as current_message,
           ss.checked_at as last_checked

@@ -68,6 +68,34 @@ check_os_updates() {
     echo "$updates_available"
 }
 
+check_disk_space() {
+    local disk_path=$1
+
+    if [ -z "$disk_path" ]; then
+        echo ""
+        return
+    fi
+
+    if [ ! -e "$disk_path" ]; then
+        echo "path_not_found"
+        return
+    fi
+
+    local df_output=$(df -h "$disk_path" 2>/dev/null | tail -n 1)
+
+    if [ -z "$df_output" ]; then
+        echo "error"
+        return
+    fi
+
+    local usage=$(echo "$df_output" | awk '{print $5}' | sed 's/%//')
+    local total=$(echo "$df_output" | awk '{print $2}')
+    local used=$(echo "$df_output" | awk '{print $3}')
+    local available=$(echo "$df_output" | awk '{print $4}')
+
+    echo "${usage}|${total}|${used}|${available}"
+}
+
 get_service_version() {
     local service_name=$1
     local service_name_lower=$(echo "$service_name" | tr '[:upper:]' '[:lower:]')
@@ -142,6 +170,7 @@ send_status() {
     local status=$3
     local message=$4
     local version=$5
+    local disk_info=$6
 
     local json_data="{
         \"server_name\": \"${server_name}\",
@@ -152,6 +181,19 @@ send_status() {
     if [ -n "$version" ]; then
         json_data="${json_data},
         \"version\": \"${version}\""
+    fi
+
+    if [ -n "$disk_info" ]; then
+        local disk_usage=$(echo "$disk_info" | cut -d'|' -f1)
+        local disk_total=$(echo "$disk_info" | cut -d'|' -f2)
+        local disk_used=$(echo "$disk_info" | cut -d'|' -f3)
+        local disk_available=$(echo "$disk_info" | cut -d'|' -f4)
+
+        json_data="${json_data},
+        \"disk_usage\": ${disk_usage},
+        \"disk_total\": \"${disk_total}\",
+        \"disk_used\": \"${disk_used}\",
+        \"disk_available\": \"${disk_available}\""
     fi
 
     json_data="${json_data}
@@ -195,13 +237,23 @@ check_all_services() {
     echo "$config" | jq -r '.services[] | @json' | while read -r service; do
         service_name=$(echo "$service" | jq -r '.name')
         check_command=$(echo "$service" | jq -r '.check_command')
+        disk_path=$(echo "$service" | jq -r '.disk_path // empty')
 
         echo "Checking ${service_name}..."
         status=$(check_service "$check_command")
         version=$(get_service_version "$service_name")
+        disk_info=""
+
+        if [ -n "$disk_path" ]; then
+            disk_info=$(check_disk_space "$disk_path")
+            if [ -n "$disk_info" ] && [ "$disk_info" != "path_not_found" ] && [ "$disk_info" != "error" ]; then
+                disk_usage=$(echo "$disk_info" | cut -d'|' -f1)
+                echo "  Disk: ${disk_usage}% used at ${disk_path}"
+            fi
+        fi
 
         message="Checked at $(date)"
-        send_status "$SERVER_NAME" "$service_name" "$status" "$message" "$version"
+        send_status "$SERVER_NAME" "$service_name" "$status" "$message" "$version" "$disk_info"
 
         echo "  Status: ${status}"
         if [ -n "$version" ]; then

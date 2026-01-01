@@ -25,6 +25,12 @@ export interface Service {
   current_status?: string;
   current_message?: string;
   last_checked?: string;
+  disk_path?: string;
+  disk_threshold?: number;
+  disk_usage?: number;
+  disk_total?: string;
+  disk_used?: string;
+  disk_available?: string;
 }
 
 export interface DashboardServer extends Server {

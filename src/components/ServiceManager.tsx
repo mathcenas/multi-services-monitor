@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
 import { api } from '../api';
-import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle, HardDrive } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
 interface ServiceManagerProps {
@@ -380,6 +380,66 @@ sudo systemctl start monitor-agent`}
                       <div>
                         <span className="text-gray-500">Message:</span>
                         <span className="ml-2 text-gray-900">{service.current_message}</span>
+                      </div>
+                    )}
+                    {service.disk_path && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <HardDrive size={16} className="text-gray-500" />
+                          <span className="text-gray-500 font-medium">Disk Space:</span>
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-900">
+                            {service.disk_path}
+                          </code>
+                        </div>
+                        {service.disk_usage !== undefined && service.disk_usage !== null ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className={`font-medium ${
+                                    service.disk_usage >= (service.disk_threshold || 80)
+                                      ? 'text-red-600'
+                                      : service.disk_usage >= (service.disk_threshold || 80) * 0.8
+                                      ? 'text-yellow-600'
+                                      : 'text-green-600'
+                                  }`}>
+                                    {service.disk_usage}% used
+                                  </span>
+                                  <span className="text-gray-500">
+                                    Threshold: {service.disk_threshold || 80}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full transition-all ${
+                                      service.disk_usage >= (service.disk_threshold || 80)
+                                        ? 'bg-red-500'
+                                        : service.disk_usage >= (service.disk_threshold || 80) * 0.8
+                                        ? 'bg-yellow-500'
+                                        : 'bg-green-500'
+                                    }`}
+                                    style={{ width: `${Math.min(service.disk_usage, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            {service.disk_used && service.disk_available && service.disk_total && (
+                              <div className="text-xs text-gray-600">
+                                Used: {service.disk_used} / Available: {service.disk_available} / Total: {service.disk_total}
+                              </div>
+                            )}
+                            {service.disk_usage >= (service.disk_threshold || 80) && (
+                              <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                                <AlertTriangle size={14} />
+                                Disk usage exceeds threshold!
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500 italic">
+                            Waiting for disk data...
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

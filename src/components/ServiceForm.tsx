@@ -15,6 +15,8 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
     type: 'systemd',
     check_command: '',
     description: '',
+    disk_path: '',
+    disk_threshold: 80,
   });
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +27,8 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
         type: service.type,
         check_command: service.check_command,
         description: service.description || '',
+        disk_path: service.disk_path || '',
+        disk_threshold: service.disk_threshold || 80,
       });
     }
   }, [service]);
@@ -122,6 +126,47 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
               rows={3}
               placeholder="Optional description..."
             />
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">
+              Disk Space Monitoring
+            </h4>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Disk Path
+                </label>
+                <input
+                  type="text"
+                  value={formData.disk_path}
+                  onChange={(e) => setFormData({ ...formData, disk_path: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  placeholder="/var/lib/mysql or /mnt/data"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Path to monitor for disk usage
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Warning Threshold (%)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={formData.disk_threshold}
+                  onChange={(e) => setFormData({ ...formData, disk_threshold: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Alert when disk usage exceeds this percentage
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
