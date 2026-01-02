@@ -79,126 +79,211 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
           </button>
 
           {showHelp && (
-            <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200 text-sm space-y-3">
-              <div>
-                <p className="font-semibold text-gray-900 mb-2">Service Examples:</p>
+            <div className="mt-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 text-sm">
+              <div className="p-4 border-b border-blue-200 bg-white/50">
+                <p className="font-semibold text-gray-900">Configuration Examples by Platform</p>
+                <p className="text-xs text-gray-600 mt-1">Choose the setup that matches your infrastructure</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="border-b border-gray-200 pb-2">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Linux/Unix</p>
-                </div>
+              <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                {/* Linux/Unix Platform */}
+                <div className="bg-white rounded-lg shadow-sm border border-blue-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-white">Linux / Unix Servers</p>
+                      <p className="text-xs text-blue-100">Agent: monitor-agent.sh</p>
+                    </div>
+                  </div>
 
-                <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">Systemd Service</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> apache2</p>
-                    <p><span className="text-gray-500">Type:</span> systemd</p>
-                    <p><span className="text-gray-500">Check Command:</span> systemctl is-active apache2</p>
+                  <div className="p-3 space-y-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Apache Web Server</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> apache2</p>
+                        <p><span className="text-gray-500">Type:</span> systemd</p>
+                        <p><span className="text-gray-500">Check Command:</span> systemctl is-active apache2</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Docker Container</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> nginx-container</p>
+                        <p><span className="text-gray-500">Type:</span> docker</p>
+                        <p><span className="text-gray-500">Check Command:</span> docker ps --filter name=nginx --filter status=running -q</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">NAS with Disk Monitoring</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Samba NAS</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> systemctl is-active smbd</p>
+                        <p><span className="text-gray-500">Disk Path:</span> /mnt/nas</p>
+                        <p><span className="text-gray-500">Threshold:</span> 90%</p>
+                      </div>
+                      <p className="mt-1 text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                        Creates service check + separate disk monitor
+                      </p>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">MySQL Database</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> MySQL</p>
+                        <p><span className="text-gray-500">Type:</span> systemd</p>
+                        <p><span className="text-gray-500">Check Command:</span> systemctl is-active mysql</p>
+                        <p><span className="text-gray-500">Disk Path:</span> /var/lib/mysql</p>
+                        <p><span className="text-gray-500">Threshold:</span> 85%</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">Docker Container</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> nginx</p>
-                    <p><span className="text-gray-500">Type:</span> docker</p>
-                    <p><span className="text-gray-500">Check Command:</span> docker ps --filter name=nginx --filter status=running -q</p>
+                {/* Windows Platform */}
+                <div className="bg-white rounded-lg shadow-sm border border-green-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 px-4 py-2 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-white">Windows Servers</p>
+                      <p className="text-xs text-green-100">Agent: monitor-agent.ps1 (PowerShell)</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 space-y-2">
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">IIS Web Server</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> IIS</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "W3SVC").Status -eq "Running"</p>
+                        <p><span className="text-gray-500">Disk Path:</span> C:\inetpub</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">SQL Server</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> SQL Server</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "MSSQLSERVER").Status -eq "Running"</p>
+                        <p><span className="text-gray-500">Disk Path:</span> D:\SQLData</p>
+                        <p><span className="text-gray-500">Threshold:</span> 85%</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">File Server (Network Drive)</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> R: Drive</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> Test-Path "R:\" -PathType Container</p>
+                        <p><span className="text-gray-500">Disk Path:</span> R:\</p>
+                        <p><span className="text-gray-500">Threshold:</span> 90%</p>
+                      </div>
+                      <p className="mt-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                        Monitors both accessibility and disk space
+                      </p>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Windows Update Service</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Windows Update</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "wuauserv").Status -eq "Running"</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white p-3 rounded border border-blue-100">
-                  <p className="font-medium text-gray-900 mb-1">File Server with Disk Monitoring</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> NAS Storage</p>
-                    <p><span className="text-gray-500">Type:</span> custom</p>
-                    <p><span className="text-gray-500">Check Command:</span> systemctl is-active smbd</p>
-                    <p><span className="text-gray-500">Disk Path:</span> /mnt/nas</p>
-                    <p><span className="text-gray-500">Threshold:</span> 90%</p>
+                {/* MikroTik Platform */}
+                <div className="bg-white rounded-lg shadow-sm border border-orange-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-white">MikroTik RouterOS</p>
+                      <p className="text-xs text-orange-100">Agent: monitor-agent-mikrotik.sh (via SSH)</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="border-b border-gray-200 pb-2 pt-3">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Windows</p>
-                </div>
+                  <div className="p-3 space-y-2">
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <div className="flex items-start justify-between mb-1">
+                        <p className="font-medium text-gray-900 text-xs">System Resources</p>
+                        <span className="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded">Auto</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-1">Monitored automatically by agent:</p>
+                      <div className="text-xs text-gray-700 space-y-0.5">
+                        <p>• CPU Load (with thresholds)</p>
+                        <p>• RAM Usage (with thresholds)</p>
+                        <p>• System Uptime</p>
+                        <p>• RouterOS Version</p>
+                        <p>• Temperature (if available)</p>
+                        <p>• Voltage (if available)</p>
+                      </div>
+                    </div>
 
-                <div className="bg-white p-3 rounded border border-green-100">
-                  <p className="font-medium text-gray-900 mb-1">IIS Web Server</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> IIS</p>
-                    <p><span className="text-gray-500">Type:</span> custom</p>
-                    <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "W3SVC").Status -eq "Running"</p>
-                    <p><span className="text-gray-500">Disk Path:</span> C:\inetpub</p>
-                  </div>
-                </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Ethernet Interface</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> LAN Interface</p>
+                        <p><span className="text-gray-500">Type:</span> interface</p>
+                        <p><span className="text-gray-500">Check Command:</span> ether1</p>
+                      </div>
+                    </div>
 
-                <div className="bg-white p-3 rounded border border-green-100">
-                  <p className="font-medium text-gray-900 mb-1">SQL Server</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> SQL Server</p>
-                    <p><span className="text-gray-500">Type:</span> custom</p>
-                    <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "MSSQLSERVER").Status -eq "Running"</p>
-                    <p><span className="text-gray-500">Disk Path:</span> D:\SQLData</p>
-                  </div>
-                </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">PPPoE WAN Connection</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> WAN PPPoE</p>
+                        <p><span className="text-gray-500">Type:</span> interface</p>
+                        <p><span className="text-gray-500">Check Command:</span> pppoe-out1</p>
+                      </div>
+                    </div>
 
-                <div className="bg-white p-3 rounded border border-green-100">
-                  <p className="font-medium text-gray-900 mb-1">File Server</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> File Server (R: Drive)</p>
-                    <p><span className="text-gray-500">Type:</span> custom</p>
-                    <p><span className="text-gray-500">Check Command:</span> Test-Path "R:\" -PathType Container</p>
-                    <p><span className="text-gray-500">Disk Path:</span> R:\</p>
-                    <p><span className="text-gray-500">Threshold:</span> 85%</p>
-                  </div>
-                  <p className="mt-2 text-xs text-green-700 bg-green-50 p-2 rounded">
-                    Creates 2 monitors: service status + disk usage
-                  </p>
-                </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">SSH Service Status</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> SSH Service</p>
+                        <p><span className="text-gray-500">Type:</span> service</p>
+                        <p><span className="text-gray-500">Check Command:</span> ssh</p>
+                      </div>
+                    </div>
 
-                <div className="border-b border-gray-200 pb-2 pt-4">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">MikroTik RouterOS</p>
-                </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">API Service Status</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> API</p>
+                        <p><span className="text-gray-500">Type:</span> service</p>
+                        <p><span className="text-gray-500">Check Command:</span> api</p>
+                      </div>
+                    </div>
 
-                <div className="bg-white p-3 rounded border border-orange-100">
-                  <p className="font-medium text-gray-900 mb-1">Network Interface</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> WAN Interface</p>
-                    <p><span className="text-gray-500">Type:</span> interface</p>
-                    <p><span className="text-gray-500">Check Command:</span> ether1</p>
-                  </div>
-                  <p className="mt-2 text-xs text-orange-700 bg-orange-50 p-2 rounded">
-                    System resources (CPU, RAM, temp) monitored automatically
-                  </p>
-                </div>
-
-                <div className="bg-white p-3 rounded border border-orange-100">
-                  <p className="font-medium text-gray-900 mb-1">PPPoE Connection</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> PPPoE WAN</p>
-                    <p><span className="text-gray-500">Type:</span> interface</p>
-                    <p><span className="text-gray-500">Check Command:</span> pppoe-out1</p>
-                  </div>
-                </div>
-
-                <div className="bg-white p-3 rounded border border-orange-100">
-                  <p className="font-medium text-gray-900 mb-1">SSH Service</p>
-                  <div className="space-y-1 text-gray-700 font-mono text-xs">
-                    <p><span className="text-gray-500">Name:</span> SSH Service</p>
-                    <p><span className="text-gray-500">Type:</span> service</p>
-                    <p><span className="text-gray-500">Check Command:</span> ssh</p>
+                    <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Custom RouterOS Command</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Active Connections</p>
+                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Check Command:</span> /ip firewall connection print count-only</p>
+                      </div>
+                      <p className="mt-1 text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded">
+                        Any valid RouterOS command can be used
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-blue-200">
-                <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Note:</span> Commands run via monitoring agents:
-                  Linux: <code className="bg-gray-100 px-1">monitor-agent.sh</code>,
-                  Windows: <code className="bg-gray-100 px-1">monitor-agent.ps1</code>,
-                  MikroTik: <code className="bg-gray-100 px-1">monitor-agent-mikrotik.sh</code> (via SSH).
-                  Adding a disk path creates a separate monitoring endpoint.
-                </p>
+              <div className="p-3 border-t border-blue-200 bg-white/50">
+                <div className="text-xs text-gray-700 space-y-1">
+                  <p><span className="font-semibold">Setup Required:</span> Install and run the appropriate agent on your server:</p>
+                  <ul className="ml-4 space-y-0.5 list-disc">
+                    <li><code className="bg-gray-100 px-1">monitor-agent.sh</code> - Run on Linux/Unix servers</li>
+                    <li><code className="bg-gray-100 px-1">monitor-agent.ps1</code> - Run on Windows servers</li>
+                    <li><code className="bg-gray-100 px-1">monitor-agent-mikrotik.sh</code> - Run on any machine with SSH access to MikroTik</li>
+                  </ul>
+                  <p className="pt-1"><span className="font-semibold">Disk Monitoring:</span> Add a disk path to create a separate monitoring endpoint for disk usage alerts.</p>
+                </div>
               </div>
             </div>
           )}
