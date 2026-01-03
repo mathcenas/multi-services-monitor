@@ -162,95 +162,172 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
         />
       )}
 
-      {showAgentSetup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-auto">
-            <div className="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">Monitoring Agent Setup</h3>
-              <button
-                onClick={() => setShowAgentSetup(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Server Information</h4>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Server ID:</span>
-                    <code className="font-mono font-bold text-blue-600">{server.id}</code>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Server Name:</span>
-                    <code className="font-mono text-gray-900">{server.name}</code>
+{showAgentSetup && (() => {
+        const hasWindowsServices = services.some(s => s.type === 'windows');
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-auto">
+              <div className="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-900">Monitoring Agent Setup</h3>
+                <button
+                  onClick={() => setShowAgentSetup(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Server Information</h4>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Server ID:</span>
+                      <code className="font-mono font-bold text-blue-600">{server.id}</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Server Name:</span>
+                      <code className="font-mono text-gray-900">{server.name}</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Platform:</span>
+                      <code className="font-mono text-gray-900">{hasWindowsServices ? 'Windows' : 'Linux/Unix'}</code>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
-                <p className="text-sm text-red-800 mb-3">
-                  Before running the agent, install these required tools:
-                </p>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-red-900 mb-1">Ubuntu/Debian:</p>
-                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+                {hasWindowsServices ? (
+                  <>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        Windows PowerShell 5.1 or later is required (included in Windows Server 2016+)
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">1. Download the monitoring script</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Open PowerShell as Administrator and download the monitor-agent.ps1 script:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`Invoke-WebRequest -Uri "${window.location.origin}/monitor-agent.ps1" -OutFile "C:\\monitor-agent.ps1"`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">2. Configure environment variables</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Set these environment variables in PowerShell:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`$env:MONITOR_API_URL = "${window.location.origin}"
+$env:SERVER_ID = "${server.id}"
+$env:CHECK_INTERVAL = "60"  # Check every 60 seconds`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">3. Run the agent</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Run the monitoring agent:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`C:\\monitor-agent.ps1`}
+                      </pre>
+                      <p className="text-sm text-gray-600 mt-3">
+                        Or run as a Windows Service (recommended for production):
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm mt-2">
+{`# Install NSSM (Non-Sucking Service Manager)
+# Download from https://nssm.cc/download
+
+# Install the service
+nssm install MonitorAgent "powershell.exe" "-ExecutionPolicy Bypass -File C:\\monitor-agent.ps1"
+nssm set MonitorAgent AppEnvironmentExtra MONITOR_API_URL=${window.location.origin} SERVER_ID=${server.id} CHECK_INTERVAL=60
+nssm set MonitorAgent DisplayName "Server Monitoring Agent"
+nssm set MonitorAgent Description "Monitors server services and disk usage"
+nssm set MonitorAgent Start SERVICE_AUTO_START
+
+# Start the service
+nssm start MonitorAgent`}
+                      </pre>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
+                      <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>Make sure this monitoring server ({window.location.origin}) is accessible from your Windows server (check firewall rules)</li>
+                        <li>The agent will continuously check services every 60 seconds by default</li>
+                        <li>Run PowerShell as Administrator for service checks</li>
+                        <li>You may need to set execution policy: Set-ExecutionPolicy RemoteSigned</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        Before running the agent, install these required tools:
+                      </p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-red-900 mb-1">Ubuntu/Debian:</p>
+                          <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
 {`sudo apt-get update && sudo apt-get install -y curl jq`}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-red-900 mb-1">CentOS/RHEL/Rocky:</p>
-                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+                          </pre>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-red-900 mb-1">CentOS/RHEL/Rocky:</p>
+                          <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
 {`sudo yum install -y curl jq`}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-red-900 mb-1">Alpine:</p>
-                    <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
+                          </pre>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-red-900 mb-1">Alpine:</p>
+                          <pre className="bg-gray-900 text-gray-100 p-3 rounded text-sm">
 {`apk add curl jq bash`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">1. Download the monitoring script</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  Download the monitor-agent.sh script to your server:
-                </p>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">1. Download the monitoring script</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Download the monitor-agent.sh script to your server:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
 {`curl -O ${window.location.origin}/monitor-agent.sh
 chmod +x monitor-agent.sh`}
-                </pre>
-              </div>
+                      </pre>
+                    </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">2. Configure environment variables</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  Set these environment variables:
-                </p>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">2. Configure environment variables</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Set these environment variables:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
 {`export MONITOR_API_URL=${window.location.origin}
 export SERVER_ID=${server.id}
 export CHECK_INTERVAL=60  # Check every 60 seconds`}
-                </pre>
-              </div>
+                      </pre>
+                    </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">3. Run the agent</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  Run the monitoring agent:
-                </p>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">3. Run the agent</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Run the monitoring agent:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
 {`./monitor-agent.sh`}
-                </pre>
-                <p className="text-sm text-gray-600 mt-3">
-                  Or run as a systemd service (recommended for production):
-                </p>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm mt-2">
+                      </pre>
+                      <p className="text-sm text-gray-600 mt-3">
+                        Or run as a systemd service (recommended for production):
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm mt-2">
 {`sudo tee /etc/systemd/system/monitor-agent.service > /dev/null <<EOF
 [Unit]
 Description=Server Monitoring Agent
@@ -273,21 +350,24 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable monitor-agent
 sudo systemctl start monitor-agent`}
-                </pre>
-              </div>
+                      </pre>
+                    </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
-                <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                  <li>Make sure this monitoring server ({window.location.origin}) is accessible from your target server (check firewall rules)</li>
-                  <li>The agent will continuously check services every 60 seconds by default</li>
-                  <li>Run the agent as root or with sufficient permissions to check system services</li>
-                </ul>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-yellow-900 mb-2">Important Notes</h4>
+                      <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>Make sure this monitoring server ({window.location.origin}) is accessible from your target server (check firewall rules)</li>
+                        <li>The agent will continuously check services every 60 seconds by default</li>
+                        <li>Run the agent as root or with sufficient permissions to check system services</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {showConfig && config && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
