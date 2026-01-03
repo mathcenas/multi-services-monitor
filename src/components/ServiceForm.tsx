@@ -155,7 +155,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                       <p className="font-medium text-gray-900 text-xs mb-1">IIS Web Server</p>
                       <div className="space-y-0.5 text-gray-700 font-mono text-xs">
                         <p><span className="text-gray-500">Name:</span> IIS</p>
-                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
                         <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "W3SVC").Status -eq "Running"</p>
                         <p><span className="text-gray-500">Disk Path:</span> C:\inetpub</p>
                       </div>
@@ -165,7 +165,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                       <p className="font-medium text-gray-900 text-xs mb-1">SQL Server</p>
                       <div className="space-y-0.5 text-gray-700 font-mono text-xs">
                         <p><span className="text-gray-500">Name:</span> SQL Server</p>
-                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
                         <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "MSSQLSERVER").Status -eq "Running"</p>
                         <p><span className="text-gray-500">Disk Path:</span> D:\SQLData</p>
                         <p><span className="text-gray-500">Threshold:</span> 85%</p>
@@ -176,7 +176,7 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                       <p className="font-medium text-gray-900 text-xs mb-1">File Server (Network Drive)</p>
                       <div className="space-y-0.5 text-gray-700 font-mono text-xs">
                         <p><span className="text-gray-500">Name:</span> R: Drive</p>
-                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
                         <p><span className="text-gray-500">Check Command:</span> Test-Path "R:\" -PathType Container</p>
                         <p><span className="text-gray-500">Disk Path:</span> R:\</p>
                         <p><span className="text-gray-500">Threshold:</span> 90%</p>
@@ -190,9 +190,23 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                       <p className="font-medium text-gray-900 text-xs mb-1">Windows Update Service</p>
                       <div className="space-y-0.5 text-gray-700 font-mono text-xs">
                         <p><span className="text-gray-500">Name:</span> Windows Update</p>
-                        <p><span className="text-gray-500">Type:</span> custom</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
                         <p><span className="text-gray-500">Check Command:</span> (Get-Service -Name "wuauserv").Status -eq "Running"</p>
                       </div>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">C: Drive Space</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> C: System Drive</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
+                        <p><span className="text-gray-500">Check Command:</span> Test-Path "C:\" -PathType Container</p>
+                        <p><span className="text-gray-500">Disk Path:</span> C:\</p>
+                        <p><span className="text-gray-500">Threshold:</span> 85%</p>
+                      </div>
+                      <p className="mt-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                        Disk monitoring supports drive letters (C:, D:, etc.) and UNC paths
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -275,14 +289,24 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
               </div>
 
               <div className="p-3 border-t border-blue-200 bg-white/50">
-                <div className="text-xs text-gray-700 space-y-1">
-                  <p><span className="font-semibold">Setup Required:</span> Install and run the appropriate agent on your server:</p>
-                  <ul className="ml-4 space-y-0.5 list-disc">
-                    <li><code className="bg-gray-100 px-1">monitor-agent.sh</code> - Run on Linux/Unix servers</li>
-                    <li><code className="bg-gray-100 px-1">monitor-agent.ps1</code> - Run on Windows servers</li>
-                    <li><code className="bg-gray-100 px-1">monitor-agent-mikrotik.sh</code> - Run on any machine with SSH access to MikroTik</li>
-                  </ul>
-                  <p className="pt-1"><span className="font-semibold">Disk Monitoring:</span> Add a disk path to create a separate monitoring endpoint for disk usage alerts.</p>
+                <div className="text-xs text-gray-700 space-y-2">
+                  <div>
+                    <p className="font-semibold mb-1">Setup Required:</p>
+                    <p className="mb-1">Install and run the appropriate agent on your server:</p>
+                    <ul className="ml-4 space-y-0.5 list-disc">
+                      <li><code className="bg-gray-100 px-1">monitor-agent.sh</code> - Linux/Unix (bash commands)</li>
+                      <li><code className="bg-gray-100 px-1">monitor-agent.ps1</code> - Windows (PowerShell commands)</li>
+                      <li><code className="bg-gray-100 px-1">monitor-agent-mikrotik.sh</code> - MikroTik RouterOS (via SSH)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1">Disk Monitoring:</p>
+                    <ul className="ml-4 space-y-0.5 list-disc">
+                      <li><span className="font-medium">Linux:</span> Use paths like <code className="bg-gray-100 px-1">/</code>, <code className="bg-gray-100 px-1">/var/lib/mysql</code>, <code className="bg-gray-100 px-1">/mnt/nas</code></li>
+                      <li><span className="font-medium">Windows:</span> Use drive letters like <code className="bg-gray-100 px-1">C:\</code>, <code className="bg-gray-100 px-1">D:\</code>, or paths like <code className="bg-gray-100 px-1">C:\inetpub</code></li>
+                      <li>Adding a disk path creates a separate monitoring endpoint with its own status and alerts</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
@@ -313,11 +337,17 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="systemd">systemd</option>
+              <option value="systemd">systemd (Linux)</option>
               <option value="docker">docker</option>
+              <option value="windows">windows (PowerShell)</option>
+              <option value="interface">interface (MikroTik)</option>
+              <option value="service">service (MikroTik)</option>
               <option value="process">process</option>
               <option value="custom">custom</option>
             </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Type is a label for organization. The check command determines how the service is monitored.
+            </p>
           </div>
 
           <div>
