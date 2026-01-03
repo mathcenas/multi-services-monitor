@@ -408,10 +408,12 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
                   value={formData.disk_path}
                   onChange={(e) => setFormData({ ...formData, disk_path: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="/var/lib/mysql, /mnt/data, or /"
+                  placeholder={formData.type === 'windows' ? 'C:\\, D:\\, or C:\\inetpub' : '/var/lib/mysql, /mnt/data, or /'}
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Leave empty to skip disk monitoring. Enter a path to create an individual disk monitor.
+                  {formData.type === 'windows'
+                    ? 'Leave empty to skip disk monitoring. Enter a Windows path (C:\\, D:\\SQLData, etc.) to create an individual disk monitor.'
+                    : 'Leave empty to skip disk monitoring. Enter a Unix path (/var/lib/mysql, /mnt/data, etc.) to create an individual disk monitor.'}
                 </p>
               </div>
 
