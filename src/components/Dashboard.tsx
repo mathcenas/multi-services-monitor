@@ -303,7 +303,7 @@ export function Dashboard() {
                                 </span>
                               </div>
                             )}
-                            {service.disk_usage !== undefined && service.disk_path && (
+                            {service.disk_usage != null && service.disk_path && (
                               <div>
                                 <span className="font-medium">Disk Usage:</span>{' '}
                                 <span className={hasDiskCritical ? 'text-red-600 font-semibold' : service.disk_usage >= 70 ? 'text-orange-600' : 'text-green-600'}>

@@ -16,7 +16,43 @@ app.use(cors());
 app.use(express.json());
 
 const distPath = path.join(__dirname, '..');
-app.use(express.static(distPath));
+
+// Script download routes must come BEFORE static file serving
+app.get('/monitor-agent.sh', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.sh');
+    const script = readFileSync(scriptPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
+    res.send(script);
+  } catch (error) {
+    res.status(404).json({ error: 'Monitor agent script not found' });
+  }
+});
+
+app.get('/monitor-agent.ps1', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.ps1');
+    const script = readFileSync(scriptPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.ps1"');
+    res.send(script);
+  } catch (error) {
+    res.status(404).json({ error: 'PowerShell monitor agent script not found' });
+  }
+});
+
+app.get('/monitor-agent-mikrotik.sh', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-mikrotik.sh');
+    const script = readFileSync(scriptPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-mikrotik.sh"');
+    res.send(script);
+  } catch (error) {
+    res.status(404).json({ error: 'MikroTik monitor agent script not found' });
+  }
+});
 
 app.get('/api/servers', (req, res) => {
   try {
@@ -428,42 +464,10 @@ app.get('/api/health/disk/:serviceId', (req, res) => {
   }
 });
 
-app.get('/monitor-agent.sh', (req, res) => {
-  try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.sh');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
-    res.send(script);
-  } catch (error) {
-    res.status(404).json({ error: 'Monitor agent script not found' });
-  }
-});
+// Serve static files from the dist directory
+app.use(express.static(distPath));
 
-app.get('/monitor-agent.ps1', (req, res) => {
-  try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.ps1');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.ps1"');
-    res.send(script);
-  } catch (error) {
-    res.status(404).json({ error: 'PowerShell monitor agent script not found' });
-  }
-});
-
-app.get('/monitor-agent-mikrotik.sh', (req, res) => {
-  try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-mikrotik.sh');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-mikrotik.sh"');
-    res.send(script);
-  } catch (error) {
-    res.status(404).json({ error: 'MikroTik monitor agent script not found' });
-  }
-});
-
+// Catch-all route for client-side routing
 app.use((req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
