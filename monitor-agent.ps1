@@ -8,7 +8,7 @@ param(
 )
 
 if ([string]::IsNullOrEmpty($ApiUrl)) {
-    $ApiUrl = "https://stats.cenas-support.com}/api"
+    $ApiUrl = "https://stats.cenas-support.com"
 }
 
 if ([string]::IsNullOrEmpty($ServerId)) {
@@ -25,7 +25,7 @@ function Fetch-Config {
     param([string]$ServerId)
 
     try {
-        $url = "$ApiUrl/servers/$ServerId/services.json"
+        $url = "$ApiUrl/api/servers/$ServerId/services.json"
         $response = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop
         return $response
     }
@@ -297,7 +297,7 @@ function Send-Status {
 
     try {
         $jsonBody = $payload | ConvertTo-Json -Compress
-        $null = Invoke-RestMethod -Uri "$ApiUrl/status" -Method Post -Body $jsonBody -ContentType "application/json" -ErrorAction Stop
+        $null = Invoke-RestMethod -Uri "$ApiUrl/api/status" -Method Post -Body $jsonBody -ContentType "application/json" -ErrorAction Stop
     }
     catch {
         Write-Host "Failed to send status: $_" -ForegroundColor Red
