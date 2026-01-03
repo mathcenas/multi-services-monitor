@@ -14,6 +14,18 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/monitor-agent.sh': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/monitor-agent.ps1': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/monitor-agent-mikrotik.sh': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -430,7 +430,7 @@ app.get('/api/health/disk/:serviceId', (req, res) => {
 
 app.get('/monitor-agent.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', 'monitor-agent.sh');
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.sh');
     const script = readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
@@ -442,7 +442,7 @@ app.get('/monitor-agent.sh', (req, res) => {
 
 app.get('/monitor-agent.ps1', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', 'monitor-agent.ps1');
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.ps1');
     const script = readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.ps1"');
@@ -454,7 +454,7 @@ app.get('/monitor-agent.ps1', (req, res) => {
 
 app.get('/monitor-agent-mikrotik.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', 'monitor-agent-mikrotik.sh');
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-mikrotik.sh');
     const script = readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-mikrotik.sh"');
