@@ -70,8 +70,20 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'dashboard' && <Dashboard />}
         {currentView === 'servers' && <ServerList onSelectServer={handleSelectServer} />}
-        {currentView === 'service-manager' && selectedServer && (
-          <ServiceManager server={selectedServer} onBack={handleBackToServers} />
+        {currentView === 'service-manager' && (
+          selectedServer ? (
+            <ServiceManager server={selectedServer} onBack={handleBackToServers} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">Server not found</p>
+              <button
+                onClick={() => setCurrentView('servers')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Back to Servers
+              </button>
+            </div>
+          )
         )}
       </main>
     </div>
