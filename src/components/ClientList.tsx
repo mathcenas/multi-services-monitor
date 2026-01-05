@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Building2, Plus, Users, Server, Activity } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Building2, Plus, Users, Server, Activity, Download, Upload } from 'lucide-react';
 import { Client } from '../types';
-import { getClients } from '../api';
+import { getClients, exportData, importData } from '../api';
 
 interface ClientListProps {
   onSelectClient: (client: Client) => void;
@@ -11,6 +11,7 @@ interface ClientListProps {
 export function ClientList({ onSelectClient, onAddClient }: ClientListProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadClients();
@@ -25,6 +26,46 @@ export function ClientList({ onSelectClient, onAddClient }: ClientListProps) {
       console.error('Failed to load clients:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const blob = await exportData();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to export data:', error);
+      alert('Failed to export data');
+    }
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+
+      if (confirm('This will replace ALL existing data with the backup. Are you sure?')) {
+        const result = await importData(backup);
+        alert(`Successfully imported:\n${result.imported.clients} clients\n${result.imported.servers} servers\n${result.imported.services} services\n${result.imported.it_services} IT services`);
+        loadClients();
+      }
+    } catch (error) {
+      console.error('Failed to import data:', error);
+      alert('Failed to import data. Make sure the file is a valid backup.');
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   }
 
@@ -43,13 +84,36 @@ export function ClientList({ onSelectClient, onAddClient }: ClientListProps) {
           <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
           <p className="text-gray-600 mt-1">Manage your business clients and their infrastructure</p>
         </div>
-        <button
-          onClick={onAddClient}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Client
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Backup
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import Backup
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
+          />
+          <button
+            onClick={onAddClient}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </button>
+        </div>
       </div>
 
       {clients.length === 0 ? (

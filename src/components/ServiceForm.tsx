@@ -13,8 +13,11 @@ interface ServiceFormProps {
 export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFormProps) {
   const [formData, setFormData] = useState({
     name: '',
+    type: 'systemd',
     check_command: '',
+    description: '',
     disk_path: '',
+    disk_threshold: 80,
   });
   const [saving, setSaving] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -23,8 +26,11 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
     if (service) {
       setFormData({
         name: service.name,
+        type: service.type || 'systemd',
         check_command: service.check_command,
+        description: service.description || '',
         disk_path: service.disk_path || '',
+        disk_threshold: service.disk_threshold || 80,
       });
     }
   }, [service]);

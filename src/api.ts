@@ -176,3 +176,19 @@ export async function deleteITService(id: string): Promise<void> {
   });
   if (!response.ok) throw new Error('Failed to delete IT service');
 }
+
+export async function exportData(): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/export`);
+  if (!response.ok) throw new Error('Failed to export data');
+  return response.blob();
+}
+
+export async function importData(data: any): Promise<any> {
+  const response = await fetch(`${API_BASE}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to import data');
+  return response.json();
+}

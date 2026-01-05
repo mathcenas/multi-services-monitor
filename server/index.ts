@@ -492,6 +492,126 @@ app.delete('/api/it-services/:id', (req, res) => {
   }
 });
 
+app.get('/api/export', (req, res) => {
+  try {
+    const clients = db.prepare('SELECT * FROM clients').all();
+    const servers = db.prepare('SELECT * FROM servers').all();
+    const services = db.prepare('SELECT * FROM services').all();
+    const itServices = db.prepare('SELECT * FROM it_services_catalog').all();
+
+    const backup = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      data: {
+        clients,
+        servers,
+        services,
+        it_services: itServices,
+      }
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="backup-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(backup);
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    res.status(500).json({ error: 'Failed to export data' });
+  }
+});
+
+app.post('/api/import', (req, res) => {
+  try {
+    const { data } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'Invalid backup file' });
+    }
+
+    const { clients, servers, services, it_services } = data;
+
+    db.prepare('DELETE FROM services').run();
+    db.prepare('DELETE FROM servers').run();
+    db.prepare('DELETE FROM it_services_catalog').run();
+    db.prepare('DELETE FROM clients').run();
+
+    const insertClient = db.prepare(`
+      INSERT INTO clients (id, name, company_name, contact_email, contact_phone, address, notes, portal_enabled, portal_password)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertServer = db.prepare(`
+      INSERT INTO servers (id, name, hostname, client_id, platform, status, created_at, last_seen)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertService = db.prepare(`
+      INSERT INTO services (id, server_id, name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertITService = db.prepare(`
+      INSERT INTO it_services_catalog (id, client_id, name, category, description, provider, status, cost, billing_frequency, renewal_date, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    if (clients) {
+      for (const client of clients) {
+        insertClient.run(
+          client.id, client.name, client.company_name, client.contact_email,
+          client.contact_phone, client.address, client.notes, client.portal_enabled,
+          client.portal_password
+        );
+      }
+    }
+
+    if (servers) {
+      for (const server of servers) {
+        insertServer.run(
+          server.id, server.name, server.hostname, server.client_id,
+          server.platform, server.status, server.created_at, server.last_seen
+        );
+      }
+    }
+
+    if (services) {
+      for (const service of services) {
+        insertService.run(
+          service.id, service.server_id, service.name, service.type,
+          service.check_command, service.status, service.description,
+          service.version, service.disk_path, service.disk_threshold,
+          service.disk_usage, service.disk_total, service.disk_used,
+          service.disk_available, service.message, service.last_check,
+          service.created_at
+        );
+      }
+    }
+
+    if (it_services) {
+      for (const itService of it_services) {
+        insertITService.run(
+          itService.id, itService.client_id, itService.name, itService.category,
+          itService.description, itService.provider, itService.status,
+          itService.cost, itService.billing_frequency, itService.renewal_date,
+          itService.notes, itService.created_at
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      imported: {
+        clients: clients?.length || 0,
+        servers: servers?.length || 0,
+        services: services?.length || 0,
+        it_services: it_services?.length || 0,
+      }
+    });
+  } catch (error) {
+    console.error('Failed to import data:', error);
+    res.status(500).json({ error: 'Failed to import data' });
+  }
+});
+
 app.use(express.static(distPath));
 
 app.use((req, res) => {
