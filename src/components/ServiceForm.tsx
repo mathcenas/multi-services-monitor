@@ -210,6 +210,32 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
                         Disk monitoring supports drive letters (C:, D:, etc.) and UNC paths
                       </p>
                     </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Veeam Backup Service</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Veeam Backup</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
+                        <p><span className="text-gray-500">Check Command:</span> Get-Service -Name "VeeamBackupSvc"</p>
+                        <p><span className="text-gray-500">Disk Path:</span> D:\VeeamBackup</p>
+                        <p><span className="text-gray-500">Threshold:</span> 90%</p>
+                      </div>
+                      <p className="mt-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                        Monitors Veeam service and backup repository disk space
+                      </p>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Veeam Agent for Windows</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Veeam Agent</p>
+                        <p><span className="text-gray-500">Type:</span> windows</p>
+                        <p><span className="text-gray-500">Check Command:</span> Get-Service -Name "VeeamEndpointBackupSvc"</p>
+                      </div>
+                      <p className="mt-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                        For Veeam Agent for Windows installations
+                      </p>
+                    </div>
                   </div>
                 </div>
 

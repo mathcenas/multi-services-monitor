@@ -64,4 +64,5 @@ export interface ITService {
 
 export interface DashboardServer extends Server {
   services: Service[];
+  client?: Client;
 }

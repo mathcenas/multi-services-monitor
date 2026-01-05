@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Client, Server } from './types';
 import { Dashboard } from './components/Dashboard';
 import { ClientList } from './components/ClientList';
@@ -26,6 +26,16 @@ function App() {
   const [itServiceClientId, setITServiceClientId] = useState<string | null>(null);
 
   const isPortalView = currentView === 'client-portal';
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/portal\/([a-f0-9]+)$/);
+    if (match) {
+      const clientId = match[1];
+      setSelectedClientId(clientId);
+      setCurrentView('client-portal');
+    }
+  }, []);
 
   const handleSelectClient = (client: Client) => {
     setSelectedClientId(client.id);
@@ -115,6 +125,7 @@ function App() {
   const handleViewPortal = (clientId: string) => {
     setSelectedClientId(clientId);
     setCurrentView('client-portal');
+    window.history.pushState({}, '', `/portal/${clientId}`);
   };
 
   return (

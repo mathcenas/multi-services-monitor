@@ -235,6 +235,9 @@ export function Dashboard() {
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
+                              {server.client && (
+                                <p className="text-xs text-gray-600 mb-1">{server.client.name}</p>
+                              )}
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {hasDiskCritical && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">

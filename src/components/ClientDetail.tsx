@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Building2, Server, Activity, Plus, Edit2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Building2, Server, Activity, Plus, Edit2, ExternalLink, Copy, Check } from 'lucide-react';
 import { Client } from '../types';
 import { getClientById } from '../api';
 import { ServerList } from './ServerList';
@@ -26,6 +26,7 @@ export function ClientDetail({
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'servers' | 'services'>('servers');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadClient();
@@ -42,6 +43,14 @@ export function ClientDetail({
       setLoading(false);
     }
   }
+
+  const handleCopyPortalLink = () => {
+    const portalUrl = `${window.location.origin}/portal/${client?.id}`;
+    navigator.clipboard.writeText(portalUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   if (loading) {
     return (
@@ -109,6 +118,22 @@ export function ClientDetail({
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View Portal
+              </button>
+              <button
+                onClick={handleCopyPortalLink}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2 text-green-600" />
+                    <span className="text-green-600">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Portal Link
+                  </>
+                )}
               </button>
               <button
                 onClick={() => onEdit(client)}
