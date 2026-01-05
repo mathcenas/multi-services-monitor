@@ -120,6 +120,7 @@ export function Dashboard() {
     const isActive = service.current_status === 'up' || service.current_status === 'active';
     const isDown = service.current_status === 'down' || service.current_status === 'inactive';
     const hasDiskCritical = isDiskCritical(service);
+    const isBackupService = service.name?.toLowerCase().includes('backup') || service.name?.toLowerCase().includes('veeam');
 
     return (
       <div
@@ -140,6 +141,11 @@ export function Dashboard() {
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
                   <HardDrive size={10} />
                   Disk Critical
+                </span>
+              )}
+              {isBackupService && service.current_message && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                  {service.current_message}
                 </span>
               )}
               {service.version && (
@@ -193,7 +199,7 @@ export function Dashboard() {
               <span className="text-gray-400">({new Date(service.last_checked).toLocaleString()})</span>
             </div>
           )}
-          {service.current_message && (
+          {service.current_message && !isBackupService && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <span className="font-medium">Message:</span> {service.current_message}
             </div>

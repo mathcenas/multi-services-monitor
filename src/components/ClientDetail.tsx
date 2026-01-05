@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Building2, Server, Activity, Plus, Edit2, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Building2, Server, Activity, Plus, Edit2, ExternalLink, Copy, Check, Trash2 } from 'lucide-react';
 import { Client } from '../types';
-import { getClientById } from '../api';
+import { getClientById, deleteClient } from '../api';
 import { ServerList } from './ServerList';
 
 interface ClientDetailProps {
@@ -50,6 +50,22 @@ export function ClientDetail({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleDelete = async () => {
+    if (!client) return;
+
+    if (!confirm(`Are you sure you want to delete client "${client.name}"? This will also delete all associated servers, services, and IT services.`)) {
+      return;
+    }
+
+    try {
+      await deleteClient(client.id);
+      onBack();
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+      alert('Failed to delete client');
+    }
   };
 
   if (loading) {
@@ -142,6 +158,13 @@ export function ClientDetail({
                 <Edit2 className="h-4 w-4 mr-2" />
                 Edit
               </button>
+              <button
+                onClick={handleDelete}
+                className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
             </div>
           </div>
 
@@ -229,6 +252,7 @@ export function ClientDetail({
                 <ServerList
                   servers={client.servers}
                   onSelectServer={onSelectServer}
+                  onServerDeleted={loadClient}
                 />
               ) : (
                 <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

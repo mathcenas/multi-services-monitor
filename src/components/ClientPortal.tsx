@@ -231,7 +231,10 @@ export function ClientPortal({ slug }: ClientPortalProps) {
 
                         {server.services && server.services.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {server.services.map((service) => (
+                            {server.services.map((service) => {
+                              const isBackupService = service.name?.toLowerCase().includes('backup') || service.name?.toLowerCase().includes('veeam');
+
+                              return (
                               <div
                                 key={service.id}
                                 className={`p-3 rounded-lg border ${
@@ -248,7 +251,14 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                     {service.version && (
                                       <p className="text-xs text-gray-600 mt-1">v{service.version}</p>
                                     )}
-                                    {service.message && (
+                                    {service.message && isBackupService && (
+                                      <div className="mt-1">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                          {service.message}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {service.message && !isBackupService && (
                                       <p className="text-xs text-gray-600 mt-1 line-clamp-2">{service.message}</p>
                                     )}
                                     {service.disk_usage !== undefined && service.disk_usage !== null && (
@@ -310,7 +320,8 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                   )}
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>

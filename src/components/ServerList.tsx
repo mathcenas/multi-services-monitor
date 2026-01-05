@@ -1,12 +1,31 @@
-import { Server as ServerIcon } from 'lucide-react';
+import { Server as ServerIcon, Trash2 } from 'lucide-react';
 import { Server } from '../types';
+import { deleteServer } from '../api';
 
 interface ServerListProps {
   servers: Server[];
   onSelectServer: (serverId: string) => void;
+  onServerDeleted?: () => void;
 }
 
-export function ServerList({ servers, onSelectServer }: ServerListProps) {
+export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerListProps) {
+  const handleDelete = async (e: React.MouseEvent, serverId: string, serverName: string) => {
+    e.stopPropagation();
+
+    if (!confirm(`Are you sure you want to delete server "${serverName}"? This will also delete all associated services.`)) {
+      return;
+    }
+
+    try {
+      await deleteServer(serverId);
+      if (onServerDeleted) {
+        onServerDeleted();
+      }
+    } catch (error) {
+      console.error('Failed to delete server:', error);
+      alert('Failed to delete server');
+    }
+  };
   if (servers.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -27,11 +46,13 @@ export function ServerList({ servers, onSelectServer }: ServerListProps) {
         return (
           <div
             key={server.id}
-            onClick={() => onSelectServer(server.id)}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
+              <div
+                onClick={() => onSelectServer(server.id)}
+                className="flex items-center gap-3 flex-1 cursor-pointer"
+              >
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <ServerIcon size={20} className="text-blue-600" />
                 </div>
@@ -45,7 +66,7 @@ export function ServerList({ servers, onSelectServer }: ServerListProps) {
                   )}
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-2">
                 {activeServices > 0 && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     {activeServices} active
@@ -56,18 +77,30 @@ export function ServerList({ servers, onSelectServer }: ServerListProps) {
                     {downServices} down
                   </span>
                 )}
+                <button
+                  onClick={(e) => handleDelete(e, server.id, server.name)}
+                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors group"
+                  title="Delete Server"
+                >
+                  <Trash2 size={16} className="text-gray-400 group-hover:text-red-600" />
+                </button>
               </div>
             </div>
 
-            {server.notes && (
-              <p className="text-sm text-gray-600 mb-3">{server.notes}</p>
-            )}
-
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>{totalServices} services monitored</span>
-              {server.last_seen && (
-                <span className="text-xs">Last seen: {new Date(server.last_seen).toLocaleString()}</span>
+            <div
+              onClick={() => onSelectServer(server.id)}
+              className="cursor-pointer"
+            >
+              {server.notes && (
+                <p className="text-sm text-gray-600 mb-3">{server.notes}</p>
               )}
+
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>{totalServices} services monitored</span>
+                {server.last_seen && (
+                  <span className="text-xs">Last seen: {new Date(server.last_seen).toLocaleString()}</span>
+                )}
+              </div>
             </div>
           </div>
         );

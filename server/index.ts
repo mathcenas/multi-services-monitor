@@ -559,6 +559,11 @@ app.post('/api/status', (req, res) => {
 
     db.prepare(`UPDATE services SET ${updateFields.join(', ')} WHERE id = ?`).run(...updateValues);
 
+    db.prepare(`
+      INSERT INTO service_status (service_id, status, message, checked_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `).run((service as any).id, status, message || null);
+
     res.status(201).json({ success: true });
   } catch (error) {
     console.error('Failed to update status:', error);
@@ -700,8 +705,8 @@ app.post('/api/import', (req, res) => {
     db.prepare('DELETE FROM clients').run();
 
     const insertClient = db.prepare(`
-      INSERT INTO clients (id, name, description, contact_person, contact_email, logo_url, is_active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO clients (id, name, description, contact_person, contact_email, logo_url, portal_slug, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertServer = db.prepare(`
@@ -721,9 +726,19 @@ app.post('/api/import', (req, res) => {
 
     if (clients) {
       for (const client of clients) {
+        let portal_slug = client.portal_slug || generateSlug(client.name);
+        let slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ?').get(portal_slug);
+        let counter = 1;
+        while (slugExists) {
+          portal_slug = `${generateSlug(client.name)}-${counter}`;
+          slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ?').get(portal_slug);
+          counter++;
+        }
+
         insertClient.run(
           client.id, client.name, client.description, client.contact_person,
-          client.contact_email, client.logo_url, client.is_active,
+          client.contact_email, client.logo_url, portal_slug,
+          client.is_active !== undefined ? client.is_active : 1,
           client.created_at, client.updated_at
         );
       }
