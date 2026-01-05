@@ -4,6 +4,7 @@
 param(
     [string]$ApiUrl = $env:MONITOR_API_URL,
     [string]$ServerId = $env:SERVER_ID,
+    [string]$ServerName = $env:SERVER_NAME,
     [int]$CheckInterval = 60
 )
 
@@ -15,11 +16,13 @@ if ([string]::IsNullOrEmpty($ServerId)) {
     $ServerId = "1"
 }
 
+if ([string]::IsNullOrEmpty($ServerName)) {
+    $ServerName = $env:COMPUTERNAME
+}
+
 if ($CheckInterval -le 0) {
     $CheckInterval = 60
 }
-
-$ServerName = $env:COMPUTERNAME
 
 function Fetch-Config {
     param([string]$ServerId)

@@ -262,12 +262,18 @@ curl -s https://api.example.com/health | grep -q "ok"
    ```powershell
    $env:MONITOR_API_URL = "https://stats.cenas-support.com"
    $env:SERVER_ID = "1"
+   $env:SERVER_NAME = "your-server-name"  # Only if different from computer name
    ```
+
+   **Note:** The agent uses your Windows computer name (`$env:COMPUTERNAME`) by default. Only set `SERVER_NAME` if the name in your dashboard is different from your Windows computer name.
 
 4. **Run the agent manually:**
    ```powershell
    cd C:\MonitorAgent
    .\monitor-agent.ps1 -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -CheckInterval 60
+
+   # Or specify a custom server name
+   .\monitor-agent.ps1 -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -ServerName "servidor" -CheckInterval 60
    ```
 
 5. **Run as a Windows Service (recommended):**
@@ -281,7 +287,7 @@ curl -s https://api.example.com/health | grep -q "ok"
    ```powershell
    # Install the service
    C:\nssm\nssm.exe install MonitorAgent "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" `
-       "-ExecutionPolicy Bypass -NoProfile -File C:\MonitorAgent\monitor-agent.ps1 -ApiUrl https://stats.cenas-support.com -ServerId 1 -CheckInterval 60"
+       "-ExecutionPolicy Bypass -NoProfile -File C:\MonitorAgent\monitor-agent.ps1 -ApiUrl https://stats.cenas-support.com -ServerId 1 -ServerName servidor -CheckInterval 60"
 
    # Set service to restart on failure
    C:\nssm\nssm.exe set MonitorAgent AppRestartDelay 10000
@@ -306,7 +312,7 @@ curl -s https://api.example.com/health | grep -q "ok"
       - **Actions tab:**
         - Action: Start a program
         - Program: `powershell.exe`
-        - Arguments: `-ExecutionPolicy Bypass -NoProfile -File "C:\MonitorAgent\monitor-agent.ps1" -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -CheckInterval 60`
+        - Arguments: `-ExecutionPolicy Bypass -NoProfile -File "C:\MonitorAgent\monitor-agent.ps1" -ApiUrl "https://stats.cenas-support.com" -ServerId "1" -ServerName "servidor" -CheckInterval 60`
       - **Conditions tab:**
         - Uncheck "Start the task only if the computer is on AC power"
       - **Settings tab:**
