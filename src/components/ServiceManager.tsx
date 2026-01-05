@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Server, Service } from '../types';
-import { api } from '../api';
+import { getServices, deleteService, getServerConfig } from '../api';
 import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, CheckCircle, XCircle, Clock, Code, Terminal, AlertTriangle, HardDrive, Info, Copy } from 'lucide-react';
 import { ServiceForm } from './ServiceForm';
 
@@ -13,11 +13,11 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingService, setEditingService] = useState<Service | undefined>();
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [showAgentSetup, setShowAgentSetup] = useState(false);
-  const [expandedHelp, setExpandedHelp] = useState<number | null>(null);
+  const [expandedHelp, setExpandedHelp] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
 
   const loadServices = async () => {
     try {
-      const data = await api.getServices(server.id);
+      const data = await getServices(server.id);
       setServices(data);
     } catch (error) {
       console.error('Failed to load services:', error);
@@ -35,11 +35,11 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this service?')) return;
 
     try {
-      await api.deleteService(id);
+      await deleteService(id);
       loadServices();
     } catch (error) {
       console.error('Failed to delete service:', error);
@@ -48,13 +48,13 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
 
   const handleFormClose = () => {
     setShowForm(false);
-    setEditingService(null);
+    setEditingService(undefined);
     loadServices();
   };
 
   const handleShowConfig = async () => {
     try {
-      const configData = await api.getServerConfig(server.id);
+      const configData = await getServerConfig(server.id);
       setConfig(configData);
       setShowConfig(true);
     } catch (error) {
@@ -405,14 +405,14 @@ sudo systemctl start monitor-agent`}
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4 flex-1">
                 <div className="mt-1">
-                  {getStatusIcon(service.current_status)}
+                  {getStatusIcon(service.status)}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h4 className="font-semibold text-gray-900">{service.name}</h4>
-                    {service.current_status && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(service.current_status)}`}>
-                        {service.current_status}
+                    {service.status && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}>
+                        {service.status}
                       </span>
                     )}
                     {service.current_version && (

@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Service } from '../types';
-import { api } from '../api';
+import { createService, updateService } from '../api';
 import { X, Info } from 'lucide-react';
 
 interface ServiceFormProps {
-  serverId: number;
-  service: Service | null;
+  serverId: string;
+  service?: Service;
+  onSubmit: () => void;
   onClose: () => void;
 }
 
-export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
+export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFormProps) {
   const [formData, setFormData] = useState({
     name: '',
-    type: 'systemd',
     check_command: '',
-    description: '',
     disk_path: '',
-    disk_threshold: 80,
   });
   const [saving, setSaving] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -25,11 +23,8 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
     if (service) {
       setFormData({
         name: service.name,
-        type: service.type,
         check_command: service.check_command,
-        description: service.description || '',
         disk_path: service.disk_path || '',
-        disk_threshold: service.disk_threshold || 80,
       });
     }
   }, [service]);
@@ -40,10 +35,11 @@ export function ServiceForm({ serverId, service, onClose }: ServiceFormProps) {
 
     try {
       if (service) {
-        await api.updateService(service.id, formData);
+        await updateService(service.id, formData);
       } else {
-        await api.createService(serverId, formData);
+        await createService(serverId, formData);
       }
+      onSubmit();
       onClose();
     } catch (error) {
       console.error('Failed to save service:', error);

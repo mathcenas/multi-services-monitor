@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Server } from '../types';
-import { api } from '../api';
-import { X } from 'lucide-react';
+import { X, Server as ServerIcon } from 'lucide-react';
 
 interface ServerFormProps {
-  server: Server | null;
+  server?: Server;
+  onSubmit: (data: Partial<Server>) => Promise<void>;
   onClose: () => void;
 }
 
-export function ServerForm({ server, onClose }: ServerFormProps) {
+export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
   const [formData, setFormData] = useState({
     name: '',
-    hostname: '',
-    ip_address: '',
-    cloud_provider: '',
-    description: '',
+    os: '',
+    os_version: '',
+    notes: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -22,10 +21,9 @@ export function ServerForm({ server, onClose }: ServerFormProps) {
     if (server) {
       setFormData({
         name: server.name,
-        hostname: server.hostname,
-        ip_address: server.ip_address || '',
-        cloud_provider: server.cloud_provider || '',
-        description: server.description || '',
+        os: server.os || '',
+        os_version: server.os_version || '',
+        notes: server.notes || '',
       });
     }
   }, [server]);
@@ -35,11 +33,7 @@ export function ServerForm({ server, onClose }: ServerFormProps) {
     setSaving(true);
 
     try {
-      if (server) {
-        await api.updateServer(server.id, formData);
-      } else {
-        await api.createServer(formData);
-      }
+      await onSubmit(formData);
       onClose();
     } catch (error) {
       console.error('Failed to save server:', error);
@@ -50,17 +44,22 @@ export function ServerForm({ server, onClose }: ServerFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-900">
-            {server ? 'Edit Server' : 'Add Server'}
-          </h3>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <ServerIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              {server ? 'Edit Server' : 'Add Server'}
+            </h3>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="text-gray-400 hover:text-gray-500 transition-colors"
           >
-            <X size={20} className="text-gray-500" />
+            <X size={20} />
           </button>
         </div>
 
@@ -75,64 +74,53 @@ export function ServerForm({ server, onClose }: ServerFormProps) {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="web-server-01"
+              placeholder="web-server-01 or COMPUTERNAME"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              This should match the server's computer name for monitoring agents
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Hostname *
+              Operating System
             </label>
             <input
               type="text"
-              required
-              value={formData.hostname}
-              onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
+              value={formData.os}
+              onChange={(e) => setFormData({ ...formData, os: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="server.example.com"
+              placeholder="Windows Server, Ubuntu, CentOS, etc."
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              IP Address
+              OS Version
             </label>
             <input
               type="text"
-              value={formData.ip_address}
-              onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
+              value={formData.os_version}
+              onChange={(e) => setFormData({ ...formData, os_version: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="192.168.1.100"
+              placeholder="2022, 22.04, 7.9, etc."
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cloud Provider
-            </label>
-            <input
-              type="text"
-              value={formData.cloud_provider}
-              onChange={(e) => setFormData({ ...formData, cloud_provider: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="AWS, Azure, GCP, etc."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              Notes
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
-              placeholder="Optional description..."
+              placeholder="Internal notes about this server..."
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
@@ -145,7 +133,7 @@ export function ServerForm({ server, onClose }: ServerFormProps) {
               disabled={saving}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? 'Saving...' : server ? 'Update' : 'Add Server'}
             </button>
           </div>
         </form>
