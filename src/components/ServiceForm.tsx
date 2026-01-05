@@ -236,6 +236,64 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
                         For Veeam Agent for Windows installations
                       </p>
                     </div>
+
+                    <div className="bg-gradient-to-r from-green-100 to-teal-100 border-2 border-green-300 rounded-lg p-3 shadow-sm">
+                      <p className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                        <span className="bg-green-600 text-white px-2 py-0.5 rounded text-xs">Smart Check</span>
+                        Veeam Backup Job Status (Recommended)
+                      </p>
+                      <div className="space-y-2">
+                        <div className="bg-white border border-green-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">24-Hour Backup Check (Default)</p>
+                          <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                            <p><span className="text-gray-500">Name:</span> Veeam Daily Backup</p>
+                            <p><span className="text-gray-500">Type:</span> windows</p>
+                            <p><span className="text-gray-500">Check Command:</span> veeam-backup</p>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-700 bg-green-50 px-2 py-1 rounded">
+                            Checks Windows Event Log for successful Veeam backup completion within 24 hours
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-green-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">12-Hour Backup Check (Frequent)</p>
+                          <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                            <p><span className="text-gray-500">Name:</span> Veeam Frequent Backup</p>
+                            <p><span className="text-gray-500">Type:</span> windows</p>
+                            <p><span className="text-gray-500">Check Command:</span> veeam-backup 12</p>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-700 bg-green-50 px-2 py-1 rounded">
+                            For servers with multiple daily backups (every 12 hours)
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-green-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">48-Hour Backup Check (Weekly)</p>
+                          <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                            <p><span className="text-gray-500">Name:</span> Veeam Weekly Backup</p>
+                            <p><span className="text-gray-500">Type:</span> windows</p>
+                            <p><span className="text-gray-500">Check Command:</span> veeam-backup 48</p>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-700 bg-green-50 px-2 py-1 rounded">
+                            For servers with less frequent backup schedules
+                          </p>
+                        </div>
+
+                        <div className="bg-teal-50 border border-teal-300 rounded p-2 mt-2">
+                          <p className="font-semibold text-teal-900 text-xs mb-1">How it works:</p>
+                          <ul className="text-xs text-gray-700 space-y-1 ml-3 list-disc">
+                            <li>Scans Windows Event Log for Veeam backup events</li>
+                            <li>Checks Event ID 190 (success), 110 (failure), 510 (warning)</li>
+                            <li>Verifies last successful backup is within threshold</li>
+                            <li>Reports backup age and detects failures after success</li>
+                            <li>Works with Veeam Backup & Replication and Veeam Agent</li>
+                          </ul>
+                          <p className="mt-2 text-xs font-medium text-teal-800">
+                            Syntax: <code className="bg-white px-2 py-0.5 rounded border border-teal-300">veeam-backup [max_hours]</code>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
