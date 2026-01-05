@@ -109,7 +109,7 @@ app.post('/api/clients', (req, res) => {
       contact_person ?? null,
       contact_email ?? null,
       logo_url ?? null,
-      is_active !== undefined ? is_active : 1
+      is_active !== undefined ? (is_active ? 1 : 0) : 1
     );
 
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
@@ -133,7 +133,7 @@ app.put('/api/clients/:id', (req, res) => {
       contact_person ?? null,
       contact_email ?? null,
       logo_url ?? null,
-      is_active,
+      is_active ? 1 : 0,
       req.params.id
     );
 
