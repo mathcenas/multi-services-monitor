@@ -100,10 +100,11 @@ app.get('/api/clients/:id', (req, res) => {
 app.post('/api/clients', (req, res) => {
   try {
     const { name, description, contact_person, contact_email, logo_url, is_active } = req.body;
-    const result = db.prepare(`
+    const client = db.prepare(`
       INSERT INTO clients (name, description, contact_person, contact_email, logo_url, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
+      RETURNING *
+    `).get(
       name,
       description ?? null,
       contact_person ?? null,
@@ -112,7 +113,6 @@ app.post('/api/clients', (req, res) => {
       is_active !== undefined ? (is_active ? 1 : 0) : 1
     );
 
-    const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(client);
   } catch (error) {
     console.error('Failed to create client:', error);
@@ -193,10 +193,11 @@ app.get('/api/servers/:id', (req, res) => {
 app.post('/api/servers', (req, res) => {
   try {
     const { client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes } = req.body;
-    const result = db.prepare(`
+    const server = db.prepare(`
       INSERT INTO servers (client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      RETURNING *
+    `).get(
       client_id ?? null,
       name,
       hostname || name,
@@ -208,7 +209,6 @@ app.post('/api/servers', (req, res) => {
       notes ?? null
     );
 
-    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(server);
   } catch (error) {
     console.error('Failed to create server:', error);
@@ -290,10 +290,11 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
 app.post('/api/servers/:serverId/services', (req, res) => {
   try {
     const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
-    const result = db.prepare(`
+    const service = db.prepare(`
       INSERT INTO services (server_id, name, type, check_command, description, disk_path, disk_threshold)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      RETURNING *
+    `).get(
       req.params.serverId,
       name,
       type || 'systemd',
@@ -303,7 +304,6 @@ app.post('/api/servers/:serverId/services', (req, res) => {
       disk_threshold || 80
     );
 
-    const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(service);
   } catch (error) {
     console.error('Failed to create service:', error);
@@ -426,10 +426,11 @@ app.get('/api/clients/:clientId/it-services', (req, res) => {
 app.post('/api/it-services', (req, res) => {
   try {
     const { client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes } = req.body;
-    const result = db.prepare(`
+    const service = db.prepare(`
       INSERT INTO it_services_catalog (client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      RETURNING *
+    `).get(
       client_id,
       service_name,
       service_category,
@@ -441,7 +442,6 @@ app.post('/api/it-services', (req, res) => {
       notes ?? null
     );
 
-    const service = db.prepare('SELECT * FROM it_services_catalog WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(service);
   } catch (error) {
     console.error('Failed to create IT service:', error);
