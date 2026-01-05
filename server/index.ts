@@ -3,22 +3,13 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
-import { createClient } from '@supabase/supabase-js';
+import db from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(cors());
 app.use(express.json());
@@ -61,90 +52,87 @@ app.get('/monitor-agent-mikrotik.sh', (req, res) => {
   }
 });
 
-app.get('/api/clients', async (req, res) => {
+app.get('/api/clients', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('clients')
-      .select(`
-        *,
-        servers(*),
-        it_services:it_services_catalog(*)
-      `)
-      .order('name');
+    const clients = db.prepare(`
+      SELECT * FROM clients ORDER BY name
+    `).all();
 
-    if (error) throw error;
-    res.json(data);
+    const clientsWithRelations = clients.map((client: any) => {
+      const servers = db.prepare('SELECT * FROM servers WHERE client_id = ?').all(client.id);
+      const it_services = db.prepare('SELECT * FROM it_services_catalog WHERE client_id = ?').all(client.id);
+      return { ...client, servers, it_services };
+    });
+
+    res.json(clientsWithRelations);
   } catch (error) {
     console.error('Failed to fetch clients:', error);
     res.status(500).json({ error: 'Failed to fetch clients' });
   }
 });
 
-app.get('/api/clients/:id', async (req, res) => {
+app.get('/api/clients/:id', (req, res) => {
   try {
-    const { data: client, error } = await supabase
-      .from('clients')
-      .select(`
-        *,
-        servers(
-          *,
-          services(*)
-        ),
-        it_services:it_services_catalog(*)
-      `)
-      .eq('id', req.params.id)
-      .maybeSingle();
+    const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
 
-    if (error) throw error;
-    if (!client) return res.status(404).json({ error: 'Client not found' });
-    res.json(client);
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const servers = db.prepare(`
+      SELECT * FROM servers WHERE client_id = ?
+    `).all(req.params.id);
+
+    const serversWithServices = servers.map((server: any) => {
+      const services = db.prepare('SELECT * FROM services WHERE server_id = ?').all(server.id);
+      return { ...server, services };
+    });
+
+    const it_services = db.prepare('SELECT * FROM it_services_catalog WHERE client_id = ?').all(req.params.id);
+
+    res.json({ ...client, servers: serversWithServices, it_services });
   } catch (error) {
     console.error('Failed to fetch client:', error);
     res.status(500).json({ error: 'Failed to fetch client' });
   }
 });
 
-app.post('/api/clients', async (req, res) => {
+app.post('/api/clients', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('clients')
-      .insert([req.body])
-      .select()
-      .single();
+    const { name, description, contact_person, contact_email, logo_url, is_active } = req.body;
+    const result = db.prepare(`
+      INSERT INTO clients (name, description, contact_person, contact_email, logo_url, is_active)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(name, description, contact_person, contact_email, logo_url, is_active !== undefined ? is_active : 1);
 
-    if (error) throw error;
-    res.status(201).json(data);
+    const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(client);
   } catch (error) {
     console.error('Failed to create client:', error);
     res.status(500).json({ error: 'Failed to create client' });
   }
 });
 
-app.put('/api/clients/:id', async (req, res) => {
+app.put('/api/clients/:id', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('clients')
-      .update(req.body)
-      .eq('id', req.params.id)
-      .select()
-      .single();
+    const { name, description, contact_person, contact_email, logo_url, is_active } = req.body;
+    db.prepare(`
+      UPDATE clients
+      SET name = ?, description = ?, contact_person = ?, contact_email = ?, logo_url = ?, is_active = ?
+      WHERE id = ?
+    `).run(name, description, contact_person, contact_email, logo_url, is_active, req.params.id);
 
-    if (error) throw error;
-    res.json(data);
+    const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
+    res.json(client);
   } catch (error) {
     console.error('Failed to update client:', error);
     res.status(500).json({ error: 'Failed to update client' });
   }
 });
 
-app.delete('/api/clients/:id', async (req, res) => {
+app.delete('/api/clients/:id', (req, res) => {
   try {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', req.params.id);
-
-    if (error) throw error;
+    db.prepare('DELETE FROM clients WHERE id = ?').run(req.params.id);
     res.status(204).send();
   } catch (error) {
     console.error('Failed to delete client:', error);
@@ -152,87 +140,77 @@ app.delete('/api/clients/:id', async (req, res) => {
   }
 });
 
-app.get('/api/servers', async (req, res) => {
+app.get('/api/servers', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('servers')
-      .select(`
-        *,
-        client:clients(*),
-        services(*)
-      `)
-      .order('name');
+    const servers = db.prepare('SELECT * FROM servers ORDER BY name').all();
 
-    if (error) throw error;
-    res.json(data);
+    const serversWithRelations = servers.map((server: any) => {
+      const client = server.client_id ? db.prepare('SELECT * FROM clients WHERE id = ?').get(server.client_id) : null;
+      const services = db.prepare('SELECT * FROM services WHERE server_id = ?').all(server.id);
+      return { ...server, client, services };
+    });
+
+    res.json(serversWithRelations);
   } catch (error) {
     console.error('Failed to fetch servers:', error);
     res.status(500).json({ error: 'Failed to fetch servers' });
   }
 });
 
-app.get('/api/servers/:id', async (req, res) => {
+app.get('/api/servers/:id', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('servers')
-      .select(`
-        *,
-        client:clients(*),
-        services(*)
-      `)
-      .eq('id', req.params.id)
-      .maybeSingle();
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.id);
 
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Server not found' });
-    res.json(data);
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    const client = (server as any).client_id ? db.prepare('SELECT * FROM clients WHERE id = ?').get((server as any).client_id) : null;
+    const services = db.prepare('SELECT * FROM services WHERE server_id = ?').all(req.params.id);
+
+    res.json({ ...server, client, services });
   } catch (error) {
     console.error('Failed to fetch server:', error);
     res.status(500).json({ error: 'Failed to fetch server' });
   }
 });
 
-app.post('/api/servers', async (req, res) => {
+app.post('/api/servers', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('servers')
-      .insert([req.body])
-      .select()
-      .single();
+    const { client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes } = req.body;
+    const result = db.prepare(`
+      INSERT INTO servers (client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(client_id, name, hostname || name, ip_address, cloud_provider, os, os_version, description, notes);
 
-    if (error) throw error;
-    res.status(201).json(data);
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(server);
   } catch (error) {
     console.error('Failed to create server:', error);
     res.status(500).json({ error: 'Failed to create server' });
   }
 });
 
-app.put('/api/servers/:id', async (req, res) => {
+app.put('/api/servers/:id', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('servers')
-      .update(req.body)
-      .eq('id', req.params.id)
-      .select()
-      .single();
+    const { client_id, name, hostname, ip_address, cloud_provider, os, os_version, last_seen, description, notes } = req.body;
+    db.prepare(`
+      UPDATE servers
+      SET client_id = ?, name = ?, hostname = ?, ip_address = ?, cloud_provider = ?, os = ?, os_version = ?, last_seen = ?, description = ?, notes = ?
+      WHERE id = ?
+    `).run(client_id, name, hostname, ip_address, cloud_provider, os, os_version, last_seen, description, notes, req.params.id);
 
-    if (error) throw error;
-    res.json(data);
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.id);
+    res.json(server);
   } catch (error) {
     console.error('Failed to update server:', error);
     res.status(500).json({ error: 'Failed to update server' });
   }
 });
 
-app.delete('/api/servers/:id', async (req, res) => {
+app.delete('/api/servers/:id', (req, res) => {
   try {
-    const { error } = await supabase
-      .from('servers')
-      .delete()
-      .eq('id', req.params.id);
-
-    if (error) throw error;
+    db.prepare('DELETE FROM servers WHERE id = ?').run(req.params.id);
     res.status(204).send();
   } catch (error) {
     console.error('Failed to delete server:', error);
@@ -240,43 +218,28 @@ app.delete('/api/servers/:id', async (req, res) => {
   }
 });
 
-app.get('/api/servers/:serverId/services', async (req, res) => {
+app.get('/api/servers/:serverId/services', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('server_id', req.params.serverId)
-      .order('name');
-
-    if (error) throw error;
-    res.json(data);
+    const services = db.prepare('SELECT * FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId);
+    res.json(services);
   } catch (error) {
     console.error('Failed to fetch services:', error);
     res.status(500).json({ error: 'Failed to fetch services' });
   }
 });
 
-app.get('/api/servers/:serverId/services.json', async (req, res) => {
+app.get('/api/servers/:serverId/services.json', (req, res) => {
   try {
-    const { data: server, error: serverError } = await supabase
-      .from('servers')
-      .select('*')
-      .eq('id', req.params.serverId)
-      .maybeSingle();
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.serverId);
 
-    if (serverError) throw serverError;
-    if (!server) return res.status(404).json({ error: 'Server not found' });
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
 
-    const { data: services, error: servicesError } = await supabase
-      .from('services')
-      .select('name, check_command, disk_path')
-      .eq('server_id', req.params.serverId)
-      .order('name');
-
-    if (servicesError) throw servicesError;
+    const services = db.prepare('SELECT name, check_command, disk_path FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId);
 
     const config = {
-      server: server.name,
+      server: (server as any).name,
       services: services
     };
 
@@ -287,52 +250,44 @@ app.get('/api/servers/:serverId/services.json', async (req, res) => {
   }
 });
 
-app.post('/api/servers/:serverId/services', async (req, res) => {
+app.post('/api/servers/:serverId/services', (req, res) => {
   try {
-    const serviceData = {
-      server_id: req.params.serverId,
-      ...req.body
-    };
+    const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
+    const result = db.prepare(`
+      INSERT INTO services (server_id, name, type, check_command, description, disk_path, disk_threshold)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(req.params.serverId, name, type || 'systemd', check_command, description, disk_path, disk_threshold || 80);
 
-    const { data, error } = await supabase
-      .from('services')
-      .insert([serviceData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.status(201).json(data);
+    const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(service);
   } catch (error) {
     console.error('Failed to create service:', error);
     res.status(500).json({ error: 'Failed to create service' });
   }
 });
 
-app.put('/api/services/:id', async (req, res) => {
+app.put('/api/services/:id', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .update(req.body)
-      .eq('id', req.params.id)
-      .select()
-      .single();
+    const { name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check } = req.body;
+    db.prepare(`
+      UPDATE services
+      SET name = ?, type = ?, check_command = ?, status = ?, description = ?, version = ?,
+          disk_path = ?, disk_threshold = ?, disk_usage = ?, disk_total = ?, disk_used = ?,
+          disk_available = ?, message = ?, last_check = ?
+      WHERE id = ?
+    `).run(name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check, req.params.id);
 
-    if (error) throw error;
-    res.json(data);
+    const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
+    res.json(service);
   } catch (error) {
     console.error('Failed to update service:', error);
     res.status(500).json({ error: 'Failed to update service' });
   }
 });
 
-app.delete('/api/services/:id', async (req, res) => {
+app.delete('/api/services/:id', (req, res) => {
   try {
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', req.params.id);
-
-    if (error) throw error;
+    db.prepare('DELETE FROM services WHERE id = ?').run(req.params.id);
     res.status(204).send();
   } catch (error) {
     console.error('Failed to delete service:', error);
@@ -340,54 +295,38 @@ app.delete('/api/services/:id', async (req, res) => {
   }
 });
 
-app.post('/api/status', async (req, res) => {
+app.post('/api/status', (req, res) => {
   try {
     const { server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
 
-    const { data: server, error: serverError } = await supabase
-      .from('servers')
-      .select('id')
-      .eq('name', server_name)
-      .maybeSingle();
-
-    if (serverError) throw serverError;
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-
-    await supabase
-      .from('servers')
-      .update({ last_seen: new Date().toISOString() })
-      .eq('id', server.id);
-
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('id')
-      .eq('server_id', server.id)
-      .eq('name', service_name)
-      .maybeSingle();
-
-    if (serviceError) throw serviceError;
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-
-    const updateData: any = {
-      status,
-      message,
-      last_check: new Date().toISOString()
-    };
-
-    if (version) updateData.version = version;
-    if (disk_usage !== undefined) {
-      updateData.disk_usage = disk_usage;
-      updateData.disk_total = disk_total;
-      updateData.disk_used = disk_used;
-      updateData.disk_available = disk_available;
+    const server = db.prepare('SELECT id FROM servers WHERE name = ?').get(server_name);
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
     }
 
-    const { error: updateError } = await supabase
-      .from('services')
-      .update(updateData)
-      .eq('id', service.id);
+    db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
 
-    if (updateError) throw updateError;
+    const service = db.prepare('SELECT id FROM services WHERE server_id = ? AND name = ?').get((server as any).id, service_name);
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    const updateFields = ['status = ?', 'message = ?', 'last_check = CURRENT_TIMESTAMP'];
+    const updateValues = [status, message];
+
+    if (version) {
+      updateFields.push('version = ?');
+      updateValues.push(version);
+    }
+
+    if (disk_usage !== undefined) {
+      updateFields.push('disk_usage = ?', 'disk_total = ?', 'disk_used = ?', 'disk_available = ?');
+      updateValues.push(disk_usage, disk_total, disk_used, disk_available);
+    }
+
+    updateValues.push((service as any).id);
+
+    db.prepare(`UPDATE services SET ${updateFields.join(', ')} WHERE id = ?`).run(...updateValues);
 
     res.status(201).json({ success: true });
   } catch (error) {
@@ -396,82 +335,69 @@ app.post('/api/status', async (req, res) => {
   }
 });
 
-app.get('/api/dashboard', async (req, res) => {
+app.get('/api/dashboard', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('servers')
-      .select(`
-        *,
-        client:clients(*),
-        services(*)
-      `)
-      .order('name');
+    const servers = db.prepare('SELECT * FROM servers ORDER BY name').all();
 
-    if (error) throw error;
-    res.json(data);
+    const serversWithRelations = servers.map((server: any) => {
+      const client = server.client_id ? db.prepare('SELECT * FROM clients WHERE id = ?').get(server.client_id) : null;
+      const services = db.prepare('SELECT * FROM services WHERE server_id = ?').all(server.id);
+      return { ...server, client, services };
+    });
+
+    res.json(serversWithRelations);
   } catch (error) {
     console.error('Failed to fetch dashboard:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 });
 
-app.get('/api/clients/:clientId/it-services', async (req, res) => {
+app.get('/api/clients/:clientId/it-services', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('it_services_catalog')
-      .select('*')
-      .eq('client_id', req.params.clientId)
-      .order('service_name');
-
-    if (error) throw error;
-    res.json(data);
+    const services = db.prepare('SELECT * FROM it_services_catalog WHERE client_id = ? ORDER BY service_name').all(req.params.clientId);
+    res.json(services);
   } catch (error) {
     console.error('Failed to fetch IT services:', error);
     res.status(500).json({ error: 'Failed to fetch IT services' });
   }
 });
 
-app.post('/api/it-services', async (req, res) => {
+app.post('/api/it-services', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('it_services_catalog')
-      .insert([req.body])
-      .select()
-      .single();
+    const { client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes } = req.body;
+    const result = db.prepare(`
+      INSERT INTO it_services_catalog (client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(client_id, service_name, service_category, description, status || 'active', sla_level, monthly_cost, start_date, notes);
 
-    if (error) throw error;
-    res.status(201).json(data);
+    const service = db.prepare('SELECT * FROM it_services_catalog WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(service);
   } catch (error) {
     console.error('Failed to create IT service:', error);
     res.status(500).json({ error: 'Failed to create IT service' });
   }
 });
 
-app.put('/api/it-services/:id', async (req, res) => {
+app.put('/api/it-services/:id', (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('it_services_catalog')
-      .update(req.body)
-      .eq('id', req.params.id)
-      .select()
-      .single();
+    const { client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes } = req.body;
+    db.prepare(`
+      UPDATE it_services_catalog
+      SET client_id = ?, service_name = ?, service_category = ?, description = ?, status = ?, sla_level = ?, monthly_cost = ?, start_date = ?, notes = ?
+      WHERE id = ?
+    `).run(client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes, req.params.id);
 
-    if (error) throw error;
-    res.json(data);
+    const service = db.prepare('SELECT * FROM it_services_catalog WHERE id = ?').get(req.params.id);
+    res.json(service);
   } catch (error) {
     console.error('Failed to update IT service:', error);
     res.status(500).json({ error: 'Failed to update IT service' });
   }
 });
 
-app.delete('/api/it-services/:id', async (req, res) => {
+app.delete('/api/it-services/:id', (req, res) => {
   try {
-    const { error } = await supabase
-      .from('it_services_catalog')
-      .delete()
-      .eq('id', req.params.id);
-
-    if (error) throw error;
+    db.prepare('DELETE FROM it_services_catalog WHERE id = ?').run(req.params.id);
     res.status(204).send();
   } catch (error) {
     console.error('Failed to delete IT service:', error);
