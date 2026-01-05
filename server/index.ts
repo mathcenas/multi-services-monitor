@@ -535,31 +535,31 @@ app.post('/api/import', (req, res) => {
     db.prepare('DELETE FROM clients').run();
 
     const insertClient = db.prepare(`
-      INSERT INTO clients (id, name, company_name, contact_email, contact_phone, address, notes, portal_enabled, portal_password)
+      INSERT INTO clients (id, name, description, contact_person, contact_email, logo_url, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertServer = db.prepare(`
-      INSERT INTO servers (id, name, hostname, client_id, platform, status, created_at, last_seen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO servers (id, client_id, name, hostname, ip_address, cloud_provider, os, os_version, last_seen, description, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertService = db.prepare(`
-      INSERT INTO services (id, server_id, name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO services (id, server_id, name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertITService = db.prepare(`
-      INSERT INTO it_services_catalog (id, client_id, name, category, description, provider, status, cost, billing_frequency, renewal_date, notes, created_at)
+      INSERT INTO it_services_catalog (id, client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     if (clients) {
       for (const client of clients) {
         insertClient.run(
-          client.id, client.name, client.company_name, client.contact_email,
-          client.contact_phone, client.address, client.notes, client.portal_enabled,
-          client.portal_password
+          client.id, client.name, client.description, client.contact_person,
+          client.contact_email, client.logo_url, client.is_active,
+          client.created_at, client.updated_at
         );
       }
     }
@@ -567,8 +567,10 @@ app.post('/api/import', (req, res) => {
     if (servers) {
       for (const server of servers) {
         insertServer.run(
-          server.id, server.name, server.hostname, server.client_id,
-          server.platform, server.status, server.created_at, server.last_seen
+          server.id, server.client_id, server.name, server.hostname,
+          server.ip_address, server.cloud_provider, server.os, server.os_version,
+          server.last_seen, server.description, server.notes,
+          server.created_at, server.updated_at
         );
       }
     }
@@ -581,7 +583,7 @@ app.post('/api/import', (req, res) => {
           service.version, service.disk_path, service.disk_threshold,
           service.disk_usage, service.disk_total, service.disk_used,
           service.disk_available, service.message, service.last_check,
-          service.created_at
+          service.created_at, service.updated_at
         );
       }
     }
@@ -589,10 +591,10 @@ app.post('/api/import', (req, res) => {
     if (it_services) {
       for (const itService of it_services) {
         insertITService.run(
-          itService.id, itService.client_id, itService.name, itService.category,
-          itService.description, itService.provider, itService.status,
-          itService.cost, itService.billing_frequency, itService.renewal_date,
-          itService.notes, itService.created_at
+          itService.id, itService.client_id, itService.service_name, itService.service_category,
+          itService.description, itService.status, itService.sla_level,
+          itService.monthly_cost, itService.start_date, itService.notes,
+          itService.created_at, itService.updated_at
         );
       }
     }
