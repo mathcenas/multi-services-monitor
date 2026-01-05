@@ -510,21 +510,36 @@ app.post('/api/status', (req, res) => {
   try {
     const { server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
 
-    let server = db.prepare('SELECT id FROM servers WHERE name = ? COLLATE NOCASE').get(server_name);
+    let server = db.prepare('SELECT id, name FROM servers WHERE name = ? COLLATE NOCASE').get(server_name);
     if (!server) {
-      server = db.prepare('SELECT id FROM servers WHERE hostname = ? COLLATE NOCASE').get(server_name);
+      server = db.prepare('SELECT id, name FROM servers WHERE hostname = ? COLLATE NOCASE').get(server_name);
     }
     if (!server) {
-      console.error('Server not found:', server_name);
-      console.log('Available servers:', db.prepare('SELECT id, name, hostname FROM servers').all());
-      return res.status(404).json({ error: 'Server not found', server_name });
+      const availableServers = db.prepare('SELECT id, name, hostname FROM servers').all();
+      console.error('Server not found for name:', server_name);
+      console.log('Available servers:', availableServers);
+      const serverList = availableServers.map((s: any) => `"${s.name}"${s.hostname ? ` (hostname: "${s.hostname}")` : ''}`).join(', ');
+      return res.status(404).json({
+        error: 'Server not found',
+        server_name,
+        hint: `Set SERVER_NAME to one of: ${serverList || 'No servers configured'}`
+      });
     }
 
     db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
 
     const service = db.prepare('SELECT id FROM services WHERE server_id = ? AND name = ? COLLATE NOCASE').get((server as any).id, service_name);
     if (!service) {
-      return res.status(404).json({ error: 'Service not found' });
+      const availableServices = db.prepare('SELECT name FROM services WHERE server_id = ?').all((server as any).id);
+      const serviceList = availableServices.map((s: any) => `"${s.name}"`).join(', ');
+      console.error(`Service "${service_name}" not found on server "${(server as any).name}"`);
+      console.log('Available services:', availableServices);
+      return res.status(404).json({
+        error: 'Service not found',
+        service_name,
+        server_name: (server as any).name,
+        hint: `Available services: ${serviceList || 'No services configured'}`
+      });
     }
 
     const updateFields = ['status = ?', 'message = ?', 'last_check = CURRENT_TIMESTAMP'];

@@ -388,6 +388,12 @@ sudo systemctl start monitor-agent`}
                   GET /api/servers/{server.id}/services.json
                 </code>
               </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Full URL:
+                <code className="block mt-2 p-2 bg-gray-100 rounded text-xs break-all">
+                  {window.location.origin}/api/servers/{server.id}/services.json
+                </code>
+              </p>
               <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
                 {JSON.stringify(config, null, 2)}
               </pre>
