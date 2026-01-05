@@ -118,4 +118,54 @@ db.exec(`
   END;
 `);
 
+const checkColumn = (table: string, column: string): boolean => {
+  const result = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM pragma_table_info('${table}')
+    WHERE name = ?
+  `).get(column) as { count: number };
+  return result.count > 0;
+};
+
+if (!checkColumn('servers', 'client_id')) {
+  console.log('Adding client_id column to servers table...');
+  db.exec(`ALTER TABLE servers ADD COLUMN client_id TEXT;`);
+  console.log('Migration completed: client_id column added');
+}
+
+if (!checkColumn('servers', 'os')) {
+  console.log('Adding os columns to servers table...');
+  db.exec(`
+    ALTER TABLE servers ADD COLUMN os TEXT;
+    ALTER TABLE servers ADD COLUMN os_version TEXT;
+    ALTER TABLE servers ADD COLUMN last_seen DATETIME;
+    ALTER TABLE servers ADD COLUMN notes TEXT;
+  `);
+  console.log('Migration completed: os columns added');
+}
+
+if (!checkColumn('services', 'status')) {
+  console.log('Adding status columns to services table...');
+  db.exec(`
+    ALTER TABLE services ADD COLUMN status TEXT DEFAULT 'unknown';
+    ALTER TABLE services ADD COLUMN version TEXT;
+    ALTER TABLE services ADD COLUMN message TEXT;
+    ALTER TABLE services ADD COLUMN last_check DATETIME;
+  `);
+  console.log('Migration completed: status columns added');
+}
+
+if (!checkColumn('services', 'disk_path')) {
+  console.log('Adding disk monitoring columns to services table...');
+  db.exec(`
+    ALTER TABLE services ADD COLUMN disk_path TEXT;
+    ALTER TABLE services ADD COLUMN disk_threshold INTEGER DEFAULT 80;
+    ALTER TABLE services ADD COLUMN disk_usage INTEGER;
+    ALTER TABLE services ADD COLUMN disk_total TEXT;
+    ALTER TABLE services ADD COLUMN disk_used TEXT;
+    ALTER TABLE services ADD COLUMN disk_available TEXT;
+  `);
+  console.log('Migration completed: disk monitoring columns added');
+}
+
 export default db;
