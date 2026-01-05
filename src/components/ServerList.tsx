@@ -22,6 +22,8 @@ export function ServerList({ servers, onSelectServer }: ServerListProps) {
         const downServices = server.services?.filter(s => s.status === 'inactive').length || 0;
         const totalServices = server.services?.length || 0;
 
+        const statusDotColor = downServices > 0 ? 'bg-red-500' : activeServices > 0 ? 'bg-green-500' : 'bg-gray-400';
+
         return (
           <div
             key={server.id}
@@ -34,7 +36,10 @@ export function ServerList({ servers, onSelectServer }: ServerListProps) {
                   <ServerIcon size={20} className="text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{server.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${statusDotColor}`}></div>
+                    <h3 className="font-semibold text-gray-900">{server.name}</h3>
+                  </div>
                   {server.os && (
                     <p className="text-sm text-gray-500">{server.os} {server.os_version}</p>
                   )}

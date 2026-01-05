@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive } from 'lucide-react';
 import { Client } from '../types';
 import { getClientBySlug } from '../api';
+import { getRelativeTime } from '../utils';
 
 interface ClientPortalProps {
   slug: string;
@@ -15,6 +16,21 @@ export function ClientPortal({ slug }: ClientPortalProps) {
     loadClient();
     const interval = setInterval(loadClient, 60000);
     return () => clearInterval(interval);
+  }, [slug]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === 'r' || e.key === 'R') {
+        loadClient();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [slug]);
 
   async function loadClient() {
@@ -196,7 +212,7 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                               {server.os_version && <span>v{server.os_version}</span>}
                               {server.last_seen && (
                                 <span className="text-xs">
-                                  Last seen: {new Date(server.last_seen).toLocaleString()}
+                                  Last seen: {getRelativeTime(server.last_seen)}
                                 </span>
                               )}
                             </div>
@@ -306,9 +322,15 @@ export function ClientPortal({ slug }: ClientPortalProps) {
           </div>
 
           <div className="bg-gray-50 px-8 py-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              Last updated: {new Date().toLocaleString()} • Auto-refreshes every minute
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Last updated: {new Date().toLocaleString()} • Auto-refreshes every minute
+              </p>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 font-mono">R</kbd>
+                <span>Refresh</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
