@@ -287,7 +287,7 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
   }
 });
 
-app.get('/api/health/services/:id', (req, res) => {
+app.get('/api/health/service/:id', (req, res) => {
   try {
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
 
