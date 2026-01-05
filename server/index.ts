@@ -322,7 +322,7 @@ app.put('/api/services/:id', (req, res) => {
       WHERE id = ?
     `).run(
       name,
-      type ?? null,
+      type || 'systemd',
       check_command ?? null,
       status ?? null,
       description ?? null,
@@ -360,9 +360,14 @@ app.post('/api/status', (req, res) => {
   try {
     const { server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
 
-    const server = db.prepare('SELECT id FROM servers WHERE name = ?').get(server_name);
+    let server = db.prepare('SELECT id FROM servers WHERE name = ?').get(server_name);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      server = db.prepare('SELECT id FROM servers WHERE hostname = ?').get(server_name);
+    }
+    if (!server) {
+      console.error('Server not found:', server_name);
+      console.log('Available servers:', db.prepare('SELECT id, name, hostname FROM servers').all());
+      return res.status(404).json({ error: 'Server not found', server_name });
     }
 
     db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
