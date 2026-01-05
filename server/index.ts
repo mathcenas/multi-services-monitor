@@ -287,6 +287,59 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
   }
 });
 
+app.get('/api/health/services/:id', (req, res) => {
+  try {
+    const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Service not found'
+      });
+    }
+
+    const s = service as any;
+    const isUp = s.status === 'up' || s.status === 'active';
+    const isDown = s.status === 'down' || s.status === 'inactive';
+    const diskCritical = s.disk_usage !== null && s.disk_usage >= (s.disk_threshold || 90);
+
+    let status = 'ok';
+    let message = s.message || 'Service is running normally';
+
+    if (isDown) {
+      status = 'down';
+      message = s.message || 'Service is not running';
+    } else if (diskCritical) {
+      status = 'warning';
+      message = `Disk usage critical: ${s.disk_usage}% (threshold: ${s.disk_threshold}%)`;
+    } else if (s.disk_usage !== null && s.disk_usage >= (s.disk_threshold || 90) * 0.8) {
+      status = 'warning';
+      message = `Disk usage high: ${s.disk_usage}%`;
+    }
+
+    const response = {
+      status,
+      message,
+      service_name: s.name,
+      current_status: s.status,
+      version: s.version,
+      disk_usage: s.disk_usage,
+      disk_path: s.disk_path,
+      disk_used: s.disk_used,
+      disk_total: s.disk_total,
+      last_check: s.last_check
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to fetch service health:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch service health'
+    });
+  }
+});
+
 app.post('/api/servers/:serverId/services', (req, res) => {
   try {
     const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
