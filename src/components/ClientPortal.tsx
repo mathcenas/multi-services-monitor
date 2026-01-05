@@ -56,25 +56,25 @@ export function ClientPortal({ slug }: ClientPortalProps) {
   const downServices = totalServices - activeServices;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-12">
-            <div className="flex items-center space-x-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-blue-600 px-8 py-8">
+            <div className="flex items-center space-x-4">
               {client.logo_url ? (
                 <img
                   src={client.logo_url}
                   alt={client.name}
-                  className="h-20 w-20 rounded-xl bg-white p-2 object-contain shadow-lg"
+                  className="h-16 w-16 rounded-lg bg-white p-2 object-contain"
                 />
               ) : (
-                <div className="h-20 w-20 rounded-xl bg-white flex items-center justify-center shadow-lg">
-                  <Building2 className="h-10 w-10 text-blue-600" />
+                <div className="h-16 w-16 rounded-lg bg-white flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-blue-600" />
                 </div>
               )}
               <div>
-                <h1 className="text-3xl font-bold text-white">{client.name}</h1>
-                <p className="text-blue-100 mt-2">Infrastructure & Services Overview</p>
+                <h1 className="text-2xl font-bold text-white">{client.name}</h1>
+                <p className="text-blue-100 mt-1 text-sm">Infrastructure & Services Overview</p>
               </div>
             </div>
           </div>
@@ -86,68 +86,84 @@ export function ClientPortal({ slug }: ClientPortalProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
-                  <Server className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Servers</p>
+                    <p className="text-3xl font-bold text-gray-900">{activeServers}</p>
+                  </div>
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <Server size={24} className="text-blue-600" />
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-blue-900 mt-4">{activeServers}</p>
-                <p className="text-blue-700 text-sm font-medium mt-1">Servers Monitored</p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
-                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Active</p>
+                    <p className="text-3xl font-bold text-green-600">{activeServices}</p>
+                  </div>
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <CheckCircle2 size={24} className="text-green-600" />
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-green-900 mt-4">{activeServices}</p>
-                <p className="text-green-700 text-sm font-medium mt-1">Services Active</p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
-                  <XCircle className="h-8 w-8 text-red-600" />
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Down</p>
+                    <p className="text-3xl font-bold text-red-600">{downServices}</p>
+                  </div>
+                  <div className="p-3 bg-red-100 rounded-lg">
+                    <XCircle size={24} className="text-red-600" />
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-red-900 mt-4">{downServices}</p>
-                <p className="text-red-700 text-sm font-medium mt-1">Services Down</p>
               </div>
 
-              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
-                  <Activity className="h-8 w-8 text-yellow-600" />
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">IT Services</p>
+                    <p className="text-3xl font-bold text-gray-900">{client.it_services?.length || 0}</p>
+                  </div>
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <Activity size={24} className="text-gray-600" />
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-yellow-900 mt-4">{client.it_services?.length || 0}</p>
-                <p className="text-yellow-700 text-sm font-medium mt-1">IT Services</p>
               </div>
             </div>
 
             {client.it_services && client.it_services.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <Activity className="h-6 w-6 mr-2 text-blue-600" />
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Activity className="h-5 w-5 mr-2 text-blue-600" />
                   IT Services Provided
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {client.it_services.filter(s => s.status === 'active').map((service) => (
                     <div
                       key={service.id}
-                      className="bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-md transition-all"
+                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="text-lg font-semibold text-gray-900">{service.service_name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">{service.service_name}</h3>
                             {service.sla_level && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
                                 {service.sla_level}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{service.service_category}</p>
+                          <p className="text-sm text-gray-500 mt-1">{service.service_category}</p>
                           {service.description && (
-                            <p className="text-sm text-gray-700 mt-2">{service.description}</p>
+                            <p className="text-sm text-gray-600 mt-2">{service.description}</p>
                           )}
                         </div>
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 ml-2" />
                       </div>
                     </div>
                   ))}
@@ -157,11 +173,11 @@ export function ClientPortal({ slug }: ClientPortalProps) {
 
             {client.servers && client.servers.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <Server className="h-6 w-6 mr-2 text-blue-600" />
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Server className="h-5 w-5 mr-2 text-blue-600" />
                   Server Status
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {client.servers.map((server) => {
                     const servicesCount = server.services?.length || 0;
                     const activeCount = server.services?.filter(s => s.status === 'active').length || 0;
@@ -170,12 +186,12 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                     return (
                       <div
                         key={server.id}
-                        className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-md transition-all"
+                        className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-sm transition-shadow"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h3 className="text-xl font-semibold text-gray-900">{server.name}</h3>
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                            <h3 className="text-lg font-semibold text-gray-900">{server.name}</h3>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
                               {server.os && <span>{server.os}</span>}
                               {server.os_version && <span>v{server.os_version}</span>}
                               {server.last_seen && (
@@ -185,24 +201,24 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                              {activeCount} Active
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                              {activeCount} active
                             </span>
                             {downCount > 0 && (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                {downCount} Down
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                                {downCount} down
                               </span>
                             )}
                           </div>
                         </div>
 
                         {server.services && server.services.length > 0 && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {server.services.map((service) => (
                               <div
                                 key={service.id}
-                                className={`p-4 rounded-lg border-2 ${
+                                className={`p-3 rounded-lg border ${
                                   service.status === 'active'
                                     ? 'bg-green-50 border-green-200'
                                     : service.status === 'inactive'
@@ -289,9 +305,9 @@ export function ClientPortal({ slug }: ClientPortalProps) {
             )}
           </div>
 
-          <div className="bg-gray-50 px-8 py-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center">
-              Last updated: {new Date().toLocaleString()} • Refreshes automatically every minute
+          <div className="bg-gray-50 px-8 py-4 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
+              Last updated: {new Date().toLocaleString()} • Auto-refreshes every minute
             </p>
           </div>
         </div>
