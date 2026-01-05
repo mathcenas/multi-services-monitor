@@ -11,6 +11,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
+  const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [groupByType, setGroupByType] = useState(false);
 
@@ -60,6 +61,16 @@ export function Dashboard() {
       newExpanded.add(serverId);
     }
     setExpandedServers(newExpanded);
+  };
+
+  const toggleServiceExpansion = (serviceId: number) => {
+    const newExpanded = new Set(expandedServices);
+    if (newExpanded.has(serviceId)) {
+      newExpanded.delete(serviceId);
+    } else {
+      newExpanded.add(serviceId);
+    }
+    setExpandedServices(newExpanded);
   };
 
   const isDiskCritical = (service: Service): boolean => {
@@ -130,6 +141,24 @@ export function Dashboard() {
     }).filter(server => server.services.length > 0);
   };
 
+  const getNextCheckTime = (lastChecked: string | null, checkInterval: number): string => {
+    if (!lastChecked) return 'Unknown';
+    const lastCheckTime = new Date(lastChecked).getTime();
+    const nextCheckTime = lastCheckTime + (checkInterval * 60 * 1000);
+    const now = Date.now();
+    const diff = nextCheckTime - now;
+
+    if (diff <= 0) return 'Due now';
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    return `${minutes}m`;
+  };
+
   const renderService = (service: Service) => {
     const isActive = service.current_status === 'up' || service.current_status === 'active';
     const isDown = service.current_status === 'down' || service.current_status === 'inactive';
@@ -137,6 +166,7 @@ export function Dashboard() {
     const isBackup = isBackupService(service.name);
     const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
     const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
+    const isExpanded = expandedServices.has(service.id);
 
     let cardClasses = '';
     if (isBackup && backupColors) {
@@ -152,7 +182,8 @@ export function Dashboard() {
     return (
       <div
         key={service.id}
-        className={`p-4 rounded-lg border-2 ${cardClasses}`}
+        className={`p-4 rounded-lg border-2 ${cardClasses} cursor-pointer hover:shadow-md transition-shadow`}
+        onClick={() => toggleServiceExpansion(service.id)}
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
@@ -194,9 +225,11 @@ export function Dashboard() {
             <Clock size={20} className="text-gray-400" />
           )}
         </div>
+
         <div className="space-y-1 text-xs text-gray-600">
           <div>
             <span className="font-medium">Type:</span> {service.type}
+            {service.job_type && <span> • <span className="font-medium">Job:</span> {service.job_type}</span>}
           </div>
           {service.current_status && (
             <div>
@@ -206,32 +239,49 @@ export function Dashboard() {
               </span>
             </div>
           )}
-          {service.disk_usage != null && service.disk_path && (
-            <div>
-              <span className="font-medium">Disk Usage:</span>{' '}
-              <span className={hasDiskCritical ? 'text-red-600 font-semibold' : service.disk_usage >= 70 ? 'text-orange-600' : 'text-green-600'}>
-                {service.disk_usage.toFixed(1)}%
-              </span>
-              {' '}({service.disk_path})
-            </div>
-          )}
-          {service.disk_used && service.disk_total && (
-            <div>
-              <span className="font-medium">Disk Space:</span> {service.disk_used} / {service.disk_total}
-            </div>
-          )}
           {service.last_checked && (
             <div>
-              <span className="font-medium">Last Check:</span>{' '}
-              <span className="text-gray-500">{getRelativeTime(service.last_checked)}</span>
-              {' '}
-              <span className="text-gray-400">({new Date(service.last_checked).toLocaleString()})</span>
+              <span className="font-medium">Checked:</span>{' '}
+              <span className="text-gray-500">{getRelativeTime(service.last_checked)} ago</span>
+              {' • '}
+              <span className="font-medium">Next:</span>{' '}
+              <span className="text-gray-500">{getNextCheckTime(service.last_checked, service.check_interval)} </span>
             </div>
           )}
-          {service.current_message && !isBackupService && (
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <span className="font-medium">Message:</span> {service.current_message}
-            </div>
+
+          {isExpanded && (
+            <>
+              {service.check_command && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <span className="font-medium">Command:</span>
+                  <code className="text-xs bg-gray-100 px-1 py-0.5 rounded ml-1">{service.check_command}</code>
+                </div>
+              )}
+              {service.description && (
+                <div>
+                  <span className="font-medium">Description:</span> {service.description}
+                </div>
+              )}
+              {service.disk_usage != null && service.disk_path && (
+                <div>
+                  <span className="font-medium">Disk Usage:</span>{' '}
+                  <span className={hasDiskCritical ? 'text-red-600 font-semibold' : service.disk_usage >= 70 ? 'text-orange-600' : 'text-green-600'}>
+                    {service.disk_usage.toFixed(1)}%
+                  </span>
+                  {' '}({service.disk_path})
+                </div>
+              )}
+              {service.disk_used && service.disk_total && (
+                <div>
+                  <span className="font-medium">Disk Space:</span> {service.disk_used} / {service.disk_total}
+                </div>
+              )}
+              {service.current_message && !isBackup && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <span className="font-medium">Message:</span> {service.current_message}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

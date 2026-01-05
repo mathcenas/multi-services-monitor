@@ -11,6 +11,7 @@ interface ClientPortalProps {
 export function ClientPortal({ slug }: ClientPortalProps) {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadClient();
@@ -44,6 +45,34 @@ export function ClientPortal({ slug }: ClientPortalProps) {
       setLoading(false);
     }
   }
+
+  const toggleServiceExpansion = (serviceId: number) => {
+    const newExpanded = new Set(expandedServices);
+    if (newExpanded.has(serviceId)) {
+      newExpanded.delete(serviceId);
+    } else {
+      newExpanded.add(serviceId);
+    }
+    setExpandedServices(newExpanded);
+  };
+
+  const getNextCheckTime = (lastChecked: string | null, checkInterval: number): string => {
+    if (!lastChecked) return 'Unknown';
+    const lastCheckTime = new Date(lastChecked).getTime();
+    const nextCheckTime = lastCheckTime + (checkInterval * 60 * 1000);
+    const now = Date.now();
+    const diff = nextCheckTime - now;
+
+    if (diff <= 0) return 'Due now';
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    return `${minutes}m`;
+  };
 
   if (loading) {
     return (
@@ -235,6 +264,7 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                               const isBackup = isBackupService(service.name);
                               const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
                               const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
+                              const isExpanded = expandedServices.has(service.id);
 
                               let cardClasses = '';
                               if (isBackup && backupColors) {
@@ -250,7 +280,8 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                               return (
                               <div
                                 key={service.id}
-                                className={`p-3 rounded-lg border ${cardClasses}`}
+                                className={`p-3 rounded-lg border ${cardClasses} cursor-pointer hover:shadow-md transition-shadow`}
+                                onClick={() => toggleServiceExpansion(service.id)}
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
@@ -275,57 +306,89 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                         </span>
                                       </div>
                                     )}
-                                    {service.message && !isBackup && (
-                                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{service.message}</p>
-                                    )}
-                                    {service.disk_usage !== undefined && service.disk_usage !== null && (
-                                      <div className="mt-2 flex items-center space-x-2">
-                                        <HardDrive className="h-3 w-3 text-gray-500" />
-                                        <div className="flex-1">
-                                          <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                            <span>Disk</span>
-                                            <span>{service.disk_usage}%</span>
-                                          </div>
-                                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div
-                                              className={`h-1.5 rounded-full ${
-                                                service.disk_usage >= 90
-                                                  ? 'bg-red-600'
-                                                  : service.disk_usage >= 75
-                                                  ? 'bg-yellow-600'
-                                                  : 'bg-green-600'
-                                              }`}
-                                              style={{ width: `${service.disk_usage}%` }}
-                                            ></div>
-                                          </div>
-                                        </div>
+
+                                    <div className="mt-2 text-xs text-gray-600">
+                                      <div>
+                                        <span className="font-medium">Type:</span> {service.type}
+                                        {service.job_type && <span> • <span className="font-medium">Job:</span> {service.job_type}</span>}
                                       </div>
-                                    )}
-                                    {service.uptime_7days && service.uptime_7days.length > 0 && (
-                                      <div className="mt-2">
-                                        <div className="text-xs text-gray-600 mb-1">7-Day Uptime</div>
-                                        <div className="flex items-center space-x-0.5">
-                                          {service.uptime_7days.map((day, index) => (
-                                            <div
-                                              key={index}
-                                              className={`h-6 flex-1 rounded ${
-                                                day.uptime >= 99
-                                                  ? 'bg-green-500'
-                                                  : day.uptime >= 95
-                                                  ? 'bg-yellow-500'
-                                                  : day.uptime >= 50
-                                                  ? 'bg-orange-500'
-                                                  : 'bg-red-500'
-                                              }`}
-                                              title={`${day.date}: ${day.uptime}% uptime`}
-                                            ></div>
-                                          ))}
+                                      {service.last_checked && (
+                                        <div className="mt-1">
+                                          <span className="font-medium">Checked:</span>{' '}
+                                          <span className="text-gray-500">{getRelativeTime(service.last_checked)} ago</span>
+                                          {' • '}
+                                          <span className="font-medium">Next:</span>{' '}
+                                          <span className="text-gray-500">{getNextCheckTime(service.last_checked, service.check_interval)}</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                                          <span>{service.uptime_7days[0]?.date.slice(5)}</span>
-                                          <span>Today</span>
-                                        </div>
-                                      </div>
+                                      )}
+                                    </div>
+
+                                    {isExpanded && (
+                                      <>
+                                        {service.message && !isBackup && (
+                                          <p className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-200">{service.message}</p>
+                                        )}
+                                        {service.check_command && (
+                                          <div className="mt-2 pt-2 border-t border-gray-200 text-xs">
+                                            <span className="font-medium">Command:</span>
+                                            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded ml-1 break-all">{service.check_command}</code>
+                                          </div>
+                                        )}
+                                        {service.description && (
+                                          <div className="mt-2 text-xs text-gray-600">
+                                            <span className="font-medium">Description:</span> {service.description}
+                                          </div>
+                                        )}
+                                        {service.disk_usage !== undefined && service.disk_usage !== null && (
+                                          <div className="mt-2 flex items-center space-x-2">
+                                            <HardDrive className="h-3 w-3 text-gray-500" />
+                                            <div className="flex-1">
+                                              <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                                                <span>Disk</span>
+                                                <span>{service.disk_usage}%</span>
+                                              </div>
+                                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                <div
+                                                  className={`h-1.5 rounded-full ${
+                                                    service.disk_usage >= 90
+                                                      ? 'bg-red-600'
+                                                      : service.disk_usage >= 75
+                                                      ? 'bg-yellow-600'
+                                                      : 'bg-green-600'
+                                                  }`}
+                                                  style={{ width: `${service.disk_usage}%` }}
+                                                ></div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                        {service.uptime_7days && service.uptime_7days.length > 0 && (
+                                          <div className="mt-2">
+                                            <div className="text-xs text-gray-600 mb-1">7-Day Uptime</div>
+                                            <div className="flex items-center space-x-0.5">
+                                              {service.uptime_7days.map((day, index) => (
+                                                <div
+                                                  key={index}
+                                                  className={`h-6 flex-1 rounded ${
+                                                    day.uptime >= 99
+                                                      ? 'bg-green-500'
+                                                      : day.uptime >= 95
+                                                      ? 'bg-yellow-500'
+                                                      : day.uptime >= 50
+                                                      ? 'bg-orange-500'
+                                                      : 'bg-red-500'
+                                                  }`}
+                                                  title={`${day.date}: ${day.uptime}% uptime`}
+                                                ></div>
+                                              ))}
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                                              <span>{service.uptime_7days[0]?.date.slice(5)}</span>
+                                              <span>Today</span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                   {isBackup && backupColors ? (
