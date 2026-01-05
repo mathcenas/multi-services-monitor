@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive } from 'lucide-react';
+import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive, Archive } from 'lucide-react';
 import { Client } from '../types';
 import { getClientBySlug } from '../api';
-import { getRelativeTime } from '../utils';
+import { getRelativeTime, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel } from '../utils';
 
 interface ClientPortalProps {
   slug: string;
@@ -232,33 +232,50 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                         {server.services && server.services.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {server.services.map((service) => {
-                              const isBackupService = service.name?.toLowerCase().includes('backup') || service.name?.toLowerCase().includes('veeam');
+                              const isBackup = isBackupService(service.name);
+                              const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
+                              const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
+
+                              let cardClasses = '';
+                              if (isBackup && backupColors) {
+                                cardClasses = `${backupColors.bg} ${backupColors.border}`;
+                              } else if (service.status === 'active') {
+                                cardClasses = 'bg-green-50 border-green-200';
+                              } else if (service.status === 'inactive') {
+                                cardClasses = 'bg-red-50 border-red-200';
+                              } else {
+                                cardClasses = 'bg-gray-50 border-gray-200';
+                              }
 
                               return (
                               <div
                                 key={service.id}
-                                className={`p-3 rounded-lg border ${
-                                  service.status === 'active'
-                                    ? 'bg-green-50 border-green-200'
-                                    : service.status === 'inactive'
-                                    ? 'bg-red-50 border-red-200'
-                                    : 'bg-gray-50 border-gray-200'
-                                }`}
+                                className={`p-3 rounded-lg border ${cardClasses}`}
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-medium text-gray-900 truncate">{service.name}</p>
-                                    {service.version && (
-                                      <p className="text-xs text-gray-600 mt-1">v{service.version}</p>
-                                    )}
-                                    {service.message && isBackupService && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {service.version && (
+                                        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                          v{service.version}
+                                        </span>
+                                      )}
+                                      {isBackup && backupStatus && backupColors && (
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${backupColors.badge}`}>
+                                          <Archive size={10} />
+                                          {getBackupStatusLabel(backupStatus)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {service.message && isBackup && (
                                       <div className="mt-1">
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
                                           {service.message}
                                         </span>
                                       </div>
                                     )}
-                                    {service.message && !isBackupService && (
+                                    {service.message && !isBackup && (
                                       <p className="text-xs text-gray-600 mt-1 line-clamp-2">{service.message}</p>
                                     )}
                                     {service.disk_usage !== undefined && service.disk_usage !== null && (
@@ -311,7 +328,9 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                       </div>
                                     )}
                                   </div>
-                                  {service.status === 'active' ? (
+                                  {isBackup && backupColors ? (
+                                    <Archive className={`h-5 w-5 ${backupColors.icon} flex-shrink-0 ml-2`} />
+                                  ) : service.status === 'active' ? (
                                     <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 ml-2" />
                                   ) : service.status === 'inactive' ? (
                                     <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 ml-2" />

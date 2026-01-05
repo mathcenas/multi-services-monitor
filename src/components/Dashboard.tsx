@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { getDashboard } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
-import { getRelativeTime, groupServicesByType } from '../utils';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive } from 'lucide-react';
+import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel } from '../utils';
 
 type FilterMode = 'all' | 'issues' | 'critical-disks';
 
@@ -80,6 +80,11 @@ export function Dashboard() {
     let activeServices = 0;
     let downServices = 0;
     let diskCritical = 0;
+    let totalBackups = 0;
+    let freshBackups = 0;
+    let agingBackups = 0;
+    let staleBackups = 0;
+    let criticalBackups = 0;
 
     servers.forEach(server => {
       server.services.forEach(service => {
@@ -92,10 +97,19 @@ export function Dashboard() {
         if (isDiskCritical(service)) {
           diskCritical++;
         }
+
+        if (isBackupService(service.name)) {
+          totalBackups++;
+          const backupStatus = getBackupAgeStatus(service.last_checked);
+          if (backupStatus === 'fresh') freshBackups++;
+          else if (backupStatus === 'aging') agingBackups++;
+          else if (backupStatus === 'stale') staleBackups++;
+          else if (backupStatus === 'critical') criticalBackups++;
+        }
       });
     });
 
-    return { totalServices, activeServices, downServices, diskCritical };
+    return { totalServices, activeServices, downServices, diskCritical, totalBackups, freshBackups, agingBackups, staleBackups, criticalBackups };
   };
 
   const filterServers = (servers: DashboardServer[]): DashboardServer[] => {
@@ -120,18 +134,25 @@ export function Dashboard() {
     const isActive = service.current_status === 'up' || service.current_status === 'active';
     const isDown = service.current_status === 'down' || service.current_status === 'inactive';
     const hasDiskCritical = isDiskCritical(service);
-    const isBackupService = service.name?.toLowerCase().includes('backup') || service.name?.toLowerCase().includes('veeam');
+    const isBackup = isBackupService(service.name);
+    const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
+    const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
+
+    let cardClasses = '';
+    if (isBackup && backupColors) {
+      cardClasses = `${backupColors.bg} ${backupColors.border}`;
+    } else if (isDown || hasDiskCritical) {
+      cardClasses = 'border-red-200 bg-red-50';
+    } else if (isActive) {
+      cardClasses = 'border-green-200 bg-green-50';
+    } else {
+      cardClasses = 'border-gray-200 bg-gray-50';
+    }
 
     return (
       <div
         key={service.id}
-        className={`p-4 rounded-lg border-2 ${
-          isDown || hasDiskCritical
-            ? 'border-red-200 bg-red-50'
-            : isActive
-            ? 'border-green-200 bg-green-50'
-            : 'border-gray-200 bg-gray-50'
-        }`}
+        className={`p-4 rounded-lg border-2 ${cardClasses}`}
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
@@ -143,7 +164,13 @@ export function Dashboard() {
                   Disk Critical
                 </span>
               )}
-              {isBackupService && service.current_message && (
+              {isBackup && backupStatus && backupColors && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${backupColors.badge}`}>
+                  <Archive size={10} />
+                  {getBackupStatusLabel(backupStatus)}
+                </span>
+              )}
+              {isBackup && service.current_message && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
                   {service.current_message}
                 </span>
@@ -155,7 +182,9 @@ export function Dashboard() {
               )}
             </div>
           </div>
-          {hasDiskCritical ? (
+          {isBackup && backupColors ? (
+            <Archive size={20} className={backupColors.icon} />
+          ) : hasDiskCritical ? (
             <HardDrive size={20} className="text-red-600" />
           ) : isActive ? (
             <CheckCircle size={20} className="text-green-600" />
@@ -323,6 +352,56 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {stats.totalBackups > 0 && (
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Archive size={24} className="text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Backup Status</h3>
+                <p className="text-sm text-gray-500">{stats.totalBackups} backup job{stats.totalBackups !== 1 ? 's' : ''} monitored</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-green-700">Recent</span>
+                  <CheckCircle size={16} className="text-green-600" />
+                </div>
+                <p className="text-2xl font-bold text-green-700">{stats.freshBackups}</p>
+                <p className="text-xs text-green-600 mt-1">&lt; 24h ago</p>
+              </div>
+              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-yellow-700">Aging</span>
+                  <Clock size={16} className="text-yellow-600" />
+                </div>
+                <p className="text-2xl font-bold text-yellow-700">{stats.agingBackups}</p>
+                <p className="text-xs text-yellow-600 mt-1">24-48h ago</p>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-orange-700">Stale</span>
+                  <AlertTriangle size={16} className="text-orange-600" />
+                </div>
+                <p className="text-2xl font-bold text-orange-700">{stats.staleBackups}</p>
+                <p className="text-xs text-orange-600 mt-1">48-72h ago</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-red-700">Critical</span>
+                  <XCircle size={16} className="text-red-600" />
+                </div>
+                <p className="text-2xl font-bold text-red-700">{stats.criticalBackups}</p>
+                <p className="text-xs text-red-600 mt-1">&gt; 72h ago</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {filteredServers.map(server => {
