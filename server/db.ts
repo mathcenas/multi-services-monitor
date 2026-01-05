@@ -175,4 +175,16 @@ if (!checkColumn('clients', 'portal_slug')) {
   console.log('Migration completed: portal_slug column added');
 }
 
+if (!checkColumn('services', 'check_interval')) {
+  console.log('Adding check_interval column to services table...');
+  db.exec(`ALTER TABLE services ADD COLUMN check_interval INTEGER DEFAULT 300;`);
+  console.log('Migration completed: check_interval column added');
+}
+
+if (!checkColumn('services', 'description')) {
+  console.log('Adding description column to services table...');
+  db.exec(`ALTER TABLE services ADD COLUMN description TEXT;`);
+  console.log('Migration completed: description column added');
+}
+
 export default db;

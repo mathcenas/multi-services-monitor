@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import db from './db.js';
+import { getLatestVersion, getAllLatestVersions } from './version-checker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -352,10 +353,19 @@ app.delete('/api/servers/:id', (req, res) => {
   }
 });
 
-app.get('/api/servers/:serverId/services', (req, res) => {
+app.get('/api/servers/:serverId/services', async (req, res) => {
   try {
-    const services = db.prepare('SELECT * FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId);
-    res.json(services);
+    const services = db.prepare('SELECT * FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId) as any[];
+
+    const servicesWithVersions = await Promise.all(services.map(async (service) => {
+      if (service.version) {
+        const latestVersion = await getLatestVersion(service.name);
+        return { ...service, latest_version: latestVersion };
+      }
+      return service;
+    }));
+
+    res.json(servicesWithVersions);
   } catch (error) {
     console.error('Failed to fetch services:', error);
     res.status(500).json({ error: 'Failed to fetch services' });
@@ -370,7 +380,7 @@ app.get('/api/servers/:serverId/services.json', (req, res) => {
       return res.status(404).json({ error: 'Server not found' });
     }
 
-    const services = db.prepare('SELECT name, check_command, disk_path FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId);
+    const services = db.prepare('SELECT name, check_command, disk_path, check_interval FROM services WHERE server_id = ? ORDER BY name').all(req.params.serverId);
 
     const config = {
       server: (server as any).name,
@@ -439,10 +449,10 @@ app.get('/api/health/service/:id', (req, res) => {
 
 app.post('/api/servers/:serverId/services', (req, res) => {
   try {
-    const { name, type, check_command, description, disk_path, disk_threshold } = req.body;
+    const { name, type, check_command, description, check_interval, disk_path, disk_threshold } = req.body;
     const service = db.prepare(`
-      INSERT INTO services (server_id, name, type, check_command, description, disk_path, disk_threshold)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO services (server_id, name, type, check_command, description, check_interval, disk_path, disk_threshold)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).get(
       req.params.serverId,
@@ -450,6 +460,7 @@ app.post('/api/servers/:serverId/services', (req, res) => {
       type || 'systemd',
       check_command,
       description ?? null,
+      check_interval || 300,
       disk_path ?? null,
       disk_threshold || 80
     );
@@ -463,10 +474,10 @@ app.post('/api/servers/:serverId/services', (req, res) => {
 
 app.put('/api/services/:id', (req, res) => {
   try {
-    const { name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check } = req.body;
+    const { name, type, check_command, status, description, check_interval, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check } = req.body;
     db.prepare(`
       UPDATE services
-      SET name = ?, type = ?, check_command = ?, status = ?, description = ?, version = ?,
+      SET name = ?, type = ?, check_command = ?, status = ?, description = ?, check_interval = ?, version = ?,
           disk_path = ?, disk_threshold = ?, disk_usage = ?, disk_total = ?, disk_used = ?,
           disk_available = ?, message = ?, last_check = ?
       WHERE id = ?
@@ -476,6 +487,7 @@ app.put('/api/services/:id', (req, res) => {
       check_command ?? null,
       status ?? null,
       description ?? null,
+      check_interval ?? null,
       version ?? null,
       disk_path ?? null,
       disk_threshold ?? null,
@@ -659,6 +671,16 @@ app.delete('/api/it-services/:id', (req, res) => {
   } catch (error) {
     console.error('Failed to delete IT service:', error);
     res.status(500).json({ error: 'Failed to delete IT service' });
+  }
+});
+
+app.get('/api/versions/latest', async (req, res) => {
+  try {
+    const versions = await getAllLatestVersions();
+    res.json(versions);
+  } catch (error) {
+    console.error('Failed to fetch latest versions:', error);
+    res.status(500).json({ error: 'Failed to fetch latest versions' });
   }
 });
 

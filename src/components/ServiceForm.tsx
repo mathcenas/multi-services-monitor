@@ -16,6 +16,7 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
     type: 'systemd',
     check_command: '',
     description: '',
+    check_interval: 300,
     disk_path: '',
     disk_threshold: 80,
   });
@@ -29,6 +30,7 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
         type: service.type || 'systemd',
         check_command: service.check_command,
         description: service.description || '',
+        check_interval: service.check_interval || 300,
         disk_path: service.disk_path || '',
         disk_threshold: service.disk_threshold || 80,
       });
@@ -464,6 +466,23 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
               rows={3}
               placeholder="Optional description..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Check Interval (seconds)
+            </label>
+            <input
+              type="number"
+              min="60"
+              max="3600"
+              value={formData.check_interval}
+              onChange={(e) => setFormData({ ...formData, check_interval: parseInt(e.target.value) || 300 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              How often to check this service (default: 300 seconds / 5 minutes)
+            </p>
           </div>
 
           <div className="border-t border-gray-200 pt-4">
