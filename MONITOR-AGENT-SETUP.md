@@ -411,6 +411,45 @@ C:\inetpub
 | docker | docker-nginx | `docker ps --filter name=nginx --filter status=running -q` | - |
 | custom | Website | `(Invoke-WebRequest -Uri "http://localhost" -UseBasicParsing).StatusCode -eq 200` | - |
 | custom | Port Check | `Test-NetConnection -ComputerName localhost -Port 443 -InformationLevel Quiet` | - |
+| **custom** | **Veeam Backup (24h)** | **`veeam-backup`** | **`C:\Backup`** |
+| **custom** | **Veeam Backup (48h)** | **`veeam-backup 48`** | **`D:\VeeamBackup`** |
+
+#### Veeam Backup Monitoring
+
+The PowerShell agent includes built-in Veeam backup monitoring that checks Windows Event Logs for backup job status. This works with both **Veeam Backup & Replication** and **Veeam Agent for Windows**.
+
+**How it works:**
+- Checks Application Event Log for Veeam events in the last 48 hours
+- Monitors Event IDs: 190 (success), 110 (failure), 510 (warning)
+- Reports backup age and status
+- Alerts if backup is older than threshold
+
+**Check Command Format:**
+```
+veeam-backup [max_age_hours]
+```
+
+**Examples:**
+- `veeam-backup` - Alert if last successful backup is older than 24 hours
+- `veeam-backup 48` - Alert if last successful backup is older than 48 hours
+- `veeam-backup 12` - Alert if last successful backup is older than 12 hours
+
+**Status Messages:**
+- ✅ **Active:** "Last successful backup: 6.2 hours ago"
+- ❌ **Inactive:** "Last successful backup was 36.5 hours ago (threshold: 24 hours)"
+- ❌ **Inactive:** "Backup job failed after last success (12.3 hours ago)"
+- ⚠️ **Unknown:** "No Veeam events found in the last 48 hours"
+
+**What it monitors:**
+- ✅ Backup job completion status
+- ✅ Age of last successful backup
+- ✅ Recent backup failures
+- ✅ Veeam version (automatic detection)
+
+**Requirements:**
+- Veeam Backup & Replication OR Veeam Agent for Windows installed
+- Agent must run with privileges to read Event Log
+- Backup jobs must be configured and running
 
 ---
 
