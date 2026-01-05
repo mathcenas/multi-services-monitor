@@ -103,7 +103,14 @@ app.post('/api/clients', (req, res) => {
     const result = db.prepare(`
       INSERT INTO clients (name, description, contact_person, contact_email, logo_url, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name, description, contact_person, contact_email, logo_url, is_active !== undefined ? is_active : 1);
+    `).run(
+      name,
+      description ?? null,
+      contact_person ?? null,
+      contact_email ?? null,
+      logo_url ?? null,
+      is_active !== undefined ? is_active : 1
+    );
 
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(client);
@@ -120,7 +127,15 @@ app.put('/api/clients/:id', (req, res) => {
       UPDATE clients
       SET name = ?, description = ?, contact_person = ?, contact_email = ?, logo_url = ?, is_active = ?
       WHERE id = ?
-    `).run(name, description, contact_person, contact_email, logo_url, is_active, req.params.id);
+    `).run(
+      name,
+      description ?? null,
+      contact_person ?? null,
+      contact_email ?? null,
+      logo_url ?? null,
+      is_active,
+      req.params.id
+    );
 
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     res.json(client);
@@ -181,7 +196,17 @@ app.post('/api/servers', (req, res) => {
     const result = db.prepare(`
       INSERT INTO servers (client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(client_id, name, hostname || name, ip_address, cloud_provider, os, os_version, description, notes);
+    `).run(
+      client_id ?? null,
+      name,
+      hostname || name,
+      ip_address ?? null,
+      cloud_provider ?? null,
+      os ?? null,
+      os_version ?? null,
+      description ?? null,
+      notes ?? null
+    );
 
     const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(server);
@@ -198,7 +223,19 @@ app.put('/api/servers/:id', (req, res) => {
       UPDATE servers
       SET client_id = ?, name = ?, hostname = ?, ip_address = ?, cloud_provider = ?, os = ?, os_version = ?, last_seen = ?, description = ?, notes = ?
       WHERE id = ?
-    `).run(client_id, name, hostname, ip_address, cloud_provider, os, os_version, last_seen, description, notes, req.params.id);
+    `).run(
+      client_id ?? null,
+      name,
+      hostname ?? null,
+      ip_address ?? null,
+      cloud_provider ?? null,
+      os ?? null,
+      os_version ?? null,
+      last_seen ?? null,
+      description ?? null,
+      notes ?? null,
+      req.params.id
+    );
 
     const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.id);
     res.json(server);
@@ -256,7 +293,15 @@ app.post('/api/servers/:serverId/services', (req, res) => {
     const result = db.prepare(`
       INSERT INTO services (server_id, name, type, check_command, description, disk_path, disk_threshold)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(req.params.serverId, name, type || 'systemd', check_command, description, disk_path, disk_threshold || 80);
+    `).run(
+      req.params.serverId,
+      name,
+      type || 'systemd',
+      check_command,
+      description ?? null,
+      disk_path ?? null,
+      disk_threshold || 80
+    );
 
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(service);
@@ -275,7 +320,23 @@ app.put('/api/services/:id', (req, res) => {
           disk_path = ?, disk_threshold = ?, disk_usage = ?, disk_total = ?, disk_used = ?,
           disk_available = ?, message = ?, last_check = ?
       WHERE id = ?
-    `).run(name, type, check_command, status, description, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check, req.params.id);
+    `).run(
+      name,
+      type ?? null,
+      check_command ?? null,
+      status ?? null,
+      description ?? null,
+      version ?? null,
+      disk_path ?? null,
+      disk_threshold ?? null,
+      disk_usage ?? null,
+      disk_total ?? null,
+      disk_used ?? null,
+      disk_available ?? null,
+      message ?? null,
+      last_check ?? null,
+      req.params.id
+    );
 
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
     res.json(service);
@@ -368,7 +429,17 @@ app.post('/api/it-services', (req, res) => {
     const result = db.prepare(`
       INSERT INTO it_services_catalog (client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(client_id, service_name, service_category, description, status || 'active', sla_level, monthly_cost, start_date, notes);
+    `).run(
+      client_id,
+      service_name,
+      service_category,
+      description ?? null,
+      status || 'active',
+      sla_level ?? null,
+      monthly_cost ?? null,
+      start_date ?? null,
+      notes ?? null
+    );
 
     const service = db.prepare('SELECT * FROM it_services_catalog WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(service);
@@ -385,7 +456,18 @@ app.put('/api/it-services/:id', (req, res) => {
       UPDATE it_services_catalog
       SET client_id = ?, service_name = ?, service_category = ?, description = ?, status = ?, sla_level = ?, monthly_cost = ?, start_date = ?, notes = ?
       WHERE id = ?
-    `).run(client_id, service_name, service_category, description, status, sla_level, monthly_cost, start_date, notes, req.params.id);
+    `).run(
+      client_id,
+      service_name,
+      service_category,
+      description ?? null,
+      status,
+      sla_level ?? null,
+      monthly_cost ?? null,
+      start_date ?? null,
+      notes ?? null,
+      req.params.id
+    );
 
     const service = db.prepare('SELECT * FROM it_services_catalog WHERE id = ?').get(req.params.id);
     res.json(service);
