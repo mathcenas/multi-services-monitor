@@ -16,6 +16,7 @@ db.exec(`
     contact_person TEXT,
     contact_email TEXT,
     logo_url TEXT,
+    portal_slug TEXT UNIQUE,
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -166,6 +167,12 @@ if (!checkColumn('services', 'disk_path')) {
     ALTER TABLE services ADD COLUMN disk_available TEXT;
   `);
   console.log('Migration completed: disk monitoring columns added');
+}
+
+if (!checkColumn('clients', 'portal_slug')) {
+  console.log('Adding portal_slug column to clients table...');
+  db.exec(`ALTER TABLE clients ADD COLUMN portal_slug TEXT UNIQUE;`);
+  console.log('Migration completed: portal_slug column added');
 }
 
 export default db;

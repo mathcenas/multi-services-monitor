@@ -11,6 +11,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -71,6 +78,69 @@ app.get('/api/clients', (req, res) => {
   }
 });
 
+app.get('/api/clients/slug/:slug', (req, res) => {
+  try {
+    const client = db.prepare('SELECT * FROM clients WHERE portal_slug = ?').get(req.params.slug);
+
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const c = client as any;
+    const servers = db.prepare(`
+      SELECT * FROM servers WHERE client_id = ?
+    `).all(c.id);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString();
+
+    const serversWithServices = servers.map((server: any) => {
+      const services = db.prepare('SELECT * FROM services WHERE server_id = ?').all(server.id);
+
+      const servicesWithUptime = services.map((service: any) => {
+        const uptimeData = [];
+
+        for (let i = 6; i >= 0; i--) {
+          const dayStart = new Date();
+          dayStart.setDate(dayStart.getDate() - i);
+          dayStart.setHours(0, 0, 0, 0);
+
+          const dayEnd = new Date(dayStart);
+          dayEnd.setHours(23, 59, 59, 999);
+
+          const checks = db.prepare(`
+            SELECT status FROM service_status
+            WHERE service_id = ? AND checked_at >= ? AND checked_at <= ?
+          `).all(service.id, dayStart.toISOString(), dayEnd.toISOString()) as any[];
+
+          let uptime = 100;
+          if (checks.length > 0) {
+            const upChecks = checks.filter(c => c.status === 'up' || c.status === 'active').length;
+            uptime = Math.round((upChecks / checks.length) * 100);
+          }
+
+          uptimeData.push({
+            date: dayStart.toISOString().split('T')[0],
+            uptime
+          });
+        }
+
+        return { ...service, uptime_7days: uptimeData };
+      });
+
+      return { ...server, services: servicesWithUptime };
+    });
+
+    const it_services = db.prepare('SELECT * FROM it_services_catalog WHERE client_id = ?').all(c.id);
+
+    res.json({ ...client, servers: serversWithServices, it_services });
+  } catch (error) {
+    console.error('Failed to fetch client by slug:', error);
+    res.status(500).json({ error: 'Failed to fetch client' });
+  }
+});
+
 app.get('/api/clients/:id', (req, res) => {
   try {
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
@@ -100,9 +170,19 @@ app.get('/api/clients/:id', (req, res) => {
 app.post('/api/clients', (req, res) => {
   try {
     const { name, description, contact_person, contact_email, logo_url, is_active } = req.body;
+    let portal_slug = generateSlug(name);
+
+    let slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ?').get(portal_slug);
+    let counter = 1;
+    while (slugExists) {
+      portal_slug = `${generateSlug(name)}-${counter}`;
+      slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ?').get(portal_slug);
+      counter++;
+    }
+
     const client = db.prepare(`
-      INSERT INTO clients (name, description, contact_person, contact_email, logo_url, is_active)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO clients (name, description, contact_person, contact_email, logo_url, portal_slug, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).get(
       name,
@@ -110,6 +190,7 @@ app.post('/api/clients', (req, res) => {
       contact_person ?? null,
       contact_email ?? null,
       logo_url ?? null,
+      portal_slug,
       is_active !== undefined ? (is_active ? 1 : 0) : 1
     );
 
@@ -123,9 +204,24 @@ app.post('/api/clients', (req, res) => {
 app.put('/api/clients/:id', (req, res) => {
   try {
     const { name, description, contact_person, contact_email, logo_url, is_active } = req.body;
+
+    const oldClient = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id) as any;
+    let portal_slug = oldClient.portal_slug;
+
+    if (name && name !== oldClient.name) {
+      portal_slug = generateSlug(name);
+      let slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ? AND id != ?').get(portal_slug, req.params.id);
+      let counter = 1;
+      while (slugExists) {
+        portal_slug = `${generateSlug(name)}-${counter}`;
+        slugExists = db.prepare('SELECT id FROM clients WHERE portal_slug = ? AND id != ?').get(portal_slug, req.params.id);
+        counter++;
+      }
+    }
+
     db.prepare(`
       UPDATE clients
-      SET name = ?, description = ?, contact_person = ?, contact_email = ?, logo_url = ?, is_active = ?
+      SET name = ?, description = ?, contact_person = ?, contact_email = ?, logo_url = ?, portal_slug = ?, is_active = ?
       WHERE id = ?
     `).run(
       name,
@@ -133,6 +229,7 @@ app.put('/api/clients/:id', (req, res) => {
       contact_person ?? null,
       contact_email ?? null,
       logo_url ?? null,
+      portal_slug,
       is_active ? 1 : 0,
       req.params.id
     );

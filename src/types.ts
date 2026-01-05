@@ -5,6 +5,7 @@ export interface Client {
   contact_person?: string;
   contact_email?: string;
   logo_url?: string;
+  portal_slug?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -45,6 +46,10 @@ export interface Service {
   created_at: string;
   updated_at: string;
   server?: Server;
+  uptime_7days?: Array<{
+    date: string;
+    uptime: number;
+  }>;
 }
 
 export interface ITService {

@@ -11,7 +11,7 @@ interface ClientDetailProps {
   onAddServer: (clientId: string) => void;
   onAddITService: (clientId: string) => void;
   onSelectServer: (serverId: string) => void;
-  onViewPortal: (clientId: string) => void;
+  onViewPortal: (slug: string) => void;
 }
 
 export function ClientDetail({
@@ -45,7 +45,7 @@ export function ClientDetail({
   }
 
   const handleCopyPortalLink = () => {
-    const portalUrl = `${window.location.origin}/portal/${client?.id}`;
+    const portalUrl = `${window.location.origin}/portal/${client?.portal_slug || client?.id}`;
     navigator.clipboard.writeText(portalUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -113,7 +113,7 @@ export function ClientDetail({
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={() => onViewPortal(client.id)}
+                onClick={() => onViewPortal(client.portal_slug || client.id)}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />

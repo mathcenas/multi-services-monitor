@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive } from 'lucide-react';
 import { Client } from '../types';
-import { getClientById } from '../api';
+import { getClientBySlug } from '../api';
 
 interface ClientPortalProps {
-  clientId: string;
+  slug: string;
 }
 
-export function ClientPortal({ clientId }: ClientPortalProps) {
+export function ClientPortal({ slug }: ClientPortalProps) {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,12 +15,12 @@ export function ClientPortal({ clientId }: ClientPortalProps) {
     loadClient();
     const interval = setInterval(loadClient, 60000);
     return () => clearInterval(interval);
-  }, [clientId]);
+  }, [slug]);
 
   async function loadClient() {
     try {
       setLoading(true);
-      const data = await getClientById(clientId);
+      const data = await getClientBySlug(slug);
       setClient(data);
     } catch (error) {
       console.error('Failed to load client:', error);
@@ -239,6 +239,32 @@ export function ClientPortal({ clientId }: ClientPortalProps) {
                                               style={{ width: `${service.disk_usage}%` }}
                                             ></div>
                                           </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {service.uptime_7days && service.uptime_7days.length > 0 && (
+                                      <div className="mt-2">
+                                        <div className="text-xs text-gray-600 mb-1">7-Day Uptime</div>
+                                        <div className="flex items-center space-x-0.5">
+                                          {service.uptime_7days.map((day, index) => (
+                                            <div
+                                              key={index}
+                                              className={`h-6 flex-1 rounded ${
+                                                day.uptime >= 99
+                                                  ? 'bg-green-500'
+                                                  : day.uptime >= 95
+                                                  ? 'bg-yellow-500'
+                                                  : day.uptime >= 50
+                                                  ? 'bg-orange-500'
+                                                  : 'bg-red-500'
+                                              }`}
+                                              title={`${day.date}: ${day.uptime}% uptime`}
+                                            ></div>
+                                          ))}
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                                          <span>{service.uptime_7days[0]?.date.slice(5)}</span>
+                                          <span>Today</span>
                                         </div>
                                       </div>
                                     )}

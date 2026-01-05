@@ -14,6 +14,12 @@ export async function getClientById(id: string): Promise<Client> {
   return response.json();
 }
 
+export async function getClientBySlug(slug: string): Promise<Client> {
+  const response = await fetch(`${API_BASE}/clients/slug/${slug}`);
+  if (!response.ok) throw new Error('Failed to fetch client');
+  return response.json();
+}
+
 export async function createClient(data: Partial<Client>): Promise<Client> {
   const response = await fetch(`${API_BASE}/clients`, {
     method: 'POST',

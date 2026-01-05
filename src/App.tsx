@@ -18,6 +18,7 @@ function App() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
+  const [portalSlug, setPortalSlug] = useState<string | null>(null);
   const [showClientForm, setShowClientForm] = useState(false);
   const [showServerForm, setShowServerForm] = useState(false);
   const [showITServiceForm, setShowITServiceForm] = useState(false);
@@ -29,10 +30,10 @@ function App() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    const match = path.match(/^\/portal\/([a-f0-9]+)$/);
+    const match = path.match(/^\/portal\/([a-z0-9-]+)$/);
     if (match) {
-      const clientId = match[1];
-      setSelectedClientId(clientId);
+      const slug = match[1];
+      setPortalSlug(slug);
       setCurrentView('client-portal');
     }
   }, []);
@@ -122,10 +123,10 @@ function App() {
     }
   };
 
-  const handleViewPortal = (clientId: string) => {
-    setSelectedClientId(clientId);
+  const handleViewPortal = (slug: string) => {
+    setPortalSlug(slug);
     setCurrentView('client-portal');
-    window.history.pushState({}, '', `/portal/${clientId}`);
+    window.history.pushState({}, '', `/portal/${slug}`);
   };
 
   return (
@@ -194,8 +195,8 @@ function App() {
             onViewPortal={handleViewPortal}
           />
         )}
-        {currentView === 'client-portal' && selectedClientId && (
-          <ClientPortal clientId={selectedClientId} />
+        {currentView === 'client-portal' && portalSlug && (
+          <ClientPortal slug={portalSlug} />
         )}
         {currentView === 'service-manager' && selectedServer && (
           <ServiceManager server={selectedServer} onBack={handleBackFromServiceManager} />
