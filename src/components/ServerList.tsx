@@ -26,6 +26,21 @@ export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerL
       alert('Failed to delete server');
     }
   };
+
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMins > 0) return `${diffMins}m ago`;
+    return 'just now';
+  };
+
   if (servers.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -37,8 +52,8 @@ export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerL
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {servers.map((server) => {
-        const activeServices = server.services?.filter(s => s.status === 'active').length || 0;
-        const downServices = server.services?.filter(s => s.status === 'inactive').length || 0;
+        const activeServices = server.services?.filter(s => s.status === 'active' || s.status === 'up').length || 0;
+        const downServices = server.services?.filter(s => s.status === 'inactive' || s.status === 'down').length || 0;
         const totalServices = server.services?.length || 0;
 
         const statusDotColor = downServices > 0 ? 'bg-red-500' : activeServices > 0 ? 'bg-green-500' : 'bg-gray-400';
@@ -68,13 +83,13 @@ export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerL
               </div>
               <div className="flex items-center space-x-2">
                 {activeServices > 0 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {activeServices} active
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900">
+                    {activeServices} UP
                   </span>
                 )}
                 {downServices > 0 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    {downServices} down
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-900">
+                    {downServices} DOWN
                   </span>
                 )}
                 <button
@@ -89,18 +104,28 @@ export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerL
 
             <div
               onClick={() => onSelectServer(server.id)}
-              className="cursor-pointer"
+              className="cursor-pointer space-y-2"
             >
-              {server.notes && (
-                <p className="text-sm text-gray-600 mb-3">{server.notes}</p>
+              {server.description && (
+                <p className="text-sm text-gray-700">{server.description}</p>
               )}
 
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>{totalServices} services monitored</span>
+              {server.notes && (
+                <p className="text-xs text-gray-600 italic">{server.notes}</p>
+              )}
+
+              <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
+                <span className="font-medium text-gray-700">{totalServices} services monitored</span>
                 {server.last_seen && (
-                  <span className="text-xs">Last seen: {new Date(server.last_seen).toLocaleString()}</span>
+                  <span className="text-xs text-gray-500">Seen: {getRelativeTime(server.last_seen)}</span>
                 )}
               </div>
+
+              {server.ip_address && (
+                <div className="text-xs text-gray-500">
+                  IP: {server.ip_address}
+                </div>
+              )}
             </div>
           </div>
         );

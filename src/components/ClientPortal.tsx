@@ -307,36 +307,85 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                       </div>
                                     )}
 
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      <div>
-                                        <span className="font-medium">Type:</span> {service.type}
-                                        {service.job_type && <span> • <span className="font-medium">Job:</span> {service.job_type}</span>}
+                                    <div className="mt-2 space-y-1.5 text-xs text-gray-700">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <span className="font-medium text-gray-600">Type:</span> <span className="font-medium">{service.type || 'systemd'}</span>
+                                          {service.job_type && <span className="ml-2"><span className="font-medium text-gray-600">Job:</span> <span className="font-medium">{service.job_type}</span></span>}
+                                        </div>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                          service.status === 'active' ? 'bg-green-200 text-green-900' :
+                                          service.status === 'inactive' ? 'bg-red-200 text-red-900' :
+                                          'bg-gray-200 text-gray-900'
+                                        }`}>
+                                          {(service.status || 'unknown').toUpperCase()}
+                                        </span>
                                       </div>
+
+                                      {service.description && (
+                                        <div className="pt-1 border-t border-gray-300">
+                                          <span className="font-medium text-gray-600">Description:</span>{' '}
+                                          <span>{service.description}</span>
+                                        </div>
+                                      )}
+
                                       {service.last_checked && (
-                                        <div className="mt-1">
-                                          <span className="font-medium">Checked:</span>{' '}
-                                          <span className="text-gray-500">{getRelativeTime(service.last_checked)} ago</span>
-                                          {' • '}
-                                          <span className="font-medium">Next:</span>{' '}
-                                          <span className="text-gray-500">{getNextCheckTime(service.last_checked, service.check_interval)}</span>
+                                        <div className="flex items-center justify-between pt-1">
+                                          <div>
+                                            <span className="font-medium text-gray-600">Last:</span>{' '}
+                                            <span>{getRelativeTime(service.last_checked)} ago</span>
+                                          </div>
+                                          <div>
+                                            <span className="font-medium text-gray-600">Next:</span>{' '}
+                                            <span>{getNextCheckTime(service.last_checked, service.check_interval)}</span>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {service.disk_usage !== undefined && service.disk_usage !== null && service.disk_path && (
+                                        <div className="pt-1 border-t border-gray-300">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="font-medium text-gray-600 flex items-center gap-1">
+                                              <HardDrive size={12} />
+                                              Disk: {service.disk_path}
+                                            </span>
+                                            <span className={`font-bold ${
+                                              service.disk_usage >= 90 ? 'text-red-700' :
+                                              service.disk_usage >= 70 ? 'text-orange-700' :
+                                              'text-green-700'
+                                            }`}>
+                                              {service.disk_usage}%
+                                            </span>
+                                          </div>
+                                          {service.disk_used && service.disk_total && (
+                                            <div className="text-gray-600 text-xs">
+                                              {service.disk_used} used / {service.disk_total} total
+                                              {service.disk_available && <span> • {service.disk_available} free</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {service.message && !isBackup && (
+                                        <div className="pt-1 border-t border-gray-300">
+                                          <span className="font-medium text-gray-600">Message:</span>{' '}
+                                          <span className="italic">{service.message}</span>
                                         </div>
                                       )}
                                     </div>
 
                                     {isExpanded && (
                                       <>
-                                        {service.message && !isBackup && (
-                                          <p className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-200">{service.message}</p>
-                                        )}
                                         {service.check_command && (
-                                          <div className="mt-2 pt-2 border-t border-gray-200 text-xs">
-                                            <span className="font-medium">Command:</span>
-                                            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded ml-1 break-all">{service.check_command}</code>
+                                          <div className="mt-2 pt-2 border-t-2 border-gray-400 text-xs">
+                                            <span className="font-medium text-gray-600">Check Command:</span>
+                                            <code className="block text-xs bg-white bg-opacity-50 px-2 py-1 rounded mt-1 break-all">{service.check_command}</code>
                                           </div>
                                         )}
-                                        {service.description && (
-                                          <div className="mt-2 text-xs text-gray-600">
-                                            <span className="font-medium">Description:</span> {service.description}
+                                        {service.check_interval && (
+                                          <div className="mt-1 text-xs text-gray-700">
+                                            <span className="font-medium text-gray-600">Check Interval:</span>{' '}
+                                            <span>{service.check_interval} seconds ({Math.floor(service.check_interval / 60)} min)</span>
                                           </div>
                                         )}
                                         {service.disk_usage !== undefined && service.disk_usage !== null && (
