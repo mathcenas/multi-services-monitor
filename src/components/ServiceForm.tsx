@@ -19,6 +19,7 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
     check_interval: 300,
     disk_path: '',
     disk_threshold: 80,
+    job_type: '',
   });
   const [saving, setSaving] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -33,6 +34,7 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
         check_interval: service.check_interval || 300,
         disk_path: service.disk_path || '',
         disk_threshold: service.disk_threshold || 80,
+        job_type: service.job_type || '',
       });
     }
   }, [service]);
@@ -374,6 +376,120 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
                     </div>
                   </div>
                 </div>
+
+                {/* OpenMediaVault rsnapshot Platform */}
+                <div className="bg-white rounded-lg shadow-sm border border-purple-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-white">OpenMediaVault rsnapshot</p>
+                      <p className="text-xs text-purple-100">Agent: monitor-agent-rsnapshot.sh (Log Parser)</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 space-y-2">
+                    <div className="bg-purple-50 border border-purple-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Daily Backup Job</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Client Backup Daily</p>
+                        <p><span className="text-gray-500">Type:</span> backup</p>
+                        <p><span className="text-gray-500">Job Type:</span> daily</p>
+                        <p><span className="text-gray-500">Check Command:</span> ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25</p>
+                        <p><span className="text-gray-500">Disk Path:</span> /mnt/backup</p>
+                      </div>
+                      <p className="mt-1 text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                        Monitors daily backups (max age: 25 hours)
+                      </p>
+                    </div>
+
+                    <div className="bg-purple-50 border border-purple-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Weekly Backup Job</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Client Backup Weekly</p>
+                        <p><span className="text-gray-500">Type:</span> backup</p>
+                        <p><span className="text-gray-500">Job Type:</span> weekly</p>
+                        <p><span className="text-gray-500">Check Command:</span> f0fdd531-926e-47e8-823d-0b6ff93bd566 weekly</p>
+                      </div>
+                      <p className="mt-1 text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                        Auto-detects max age based on job type (weekly: 192h)
+                      </p>
+                    </div>
+
+                    <div className="bg-purple-50 border border-purple-200 rounded p-2">
+                      <p className="font-medium text-gray-900 text-xs mb-1">Monthly Backup Job</p>
+                      <div className="space-y-0.5 text-gray-700 font-mono text-xs">
+                        <p><span className="text-gray-500">Name:</span> Client Backup Monthly</p>
+                        <p><span className="text-gray-500">Type:</span> backup</p>
+                        <p><span className="text-gray-500">Job Type:</span> monthly</p>
+                        <p><span className="text-gray-500">Check Command:</span> c4ae9a05-3da3-49cf-a306-70ce782524af monthly 768</p>
+                        <p><span className="text-gray-500">Disk Path:</span> /srv/dev-disk-by-uuid-xxx/backup</p>
+                      </div>
+                      <p className="mt-1 text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                        Monitors monthly backups (max age: 768 hours / 32 days)
+                      </p>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-300 rounded-lg p-3 shadow-sm">
+                      <p className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                        <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-xs">Setup</span>
+                        How to Configure rsnapshot Monitoring
+                      </p>
+                      <div className="space-y-2">
+                        <div className="bg-white border border-purple-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">Step 1: Find Job UUID</p>
+                          <p className="text-xs text-gray-700 mb-1">
+                            Check the rsnapshot config directory on your OpenMediaVault server:
+                          </p>
+                          <code className="block text-xs bg-gray-100 px-2 py-1 rounded mt-1">
+                            ls /var/lib/openmediavault/rsnapshot.d/
+                          </code>
+                          <p className="mt-1 text-xs text-gray-600">
+                            Look for files like: rsnapshot-[UUID].conf
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-purple-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">Step 2: Check Log Format</p>
+                          <p className="text-xs text-gray-700 mb-1">
+                            Verify your rsnapshot log shows entries like:
+                          </p>
+                          <code className="block text-xs bg-gray-100 px-2 py-1 rounded mt-1 break-all">
+                            [2026-01-01T01:55:09] /usr/bin/rsnapshot -c /var/lib/openmediavault/rsnapshot.d/rsnapshot-ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2.conf daily: completed successfully
+                          </code>
+                        </div>
+
+                        <div className="bg-white border border-purple-200 rounded p-2">
+                          <p className="font-medium text-gray-900 text-xs mb-1">Step 3: Configure Service</p>
+                          <div className="space-y-0.5 text-xs text-gray-700">
+                            <p><span className="font-medium">Check Command Format:</span></p>
+                            <code className="block bg-gray-100 px-2 py-1 rounded my-1">
+                              [UUID] [job_type] [max_age_hours]
+                            </code>
+                            <p className="mt-1"><span className="font-medium">Examples:</span></p>
+                            <ul className="ml-3 space-y-0.5 list-disc">
+                              <li>ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25</li>
+                              <li>f0fdd531-926e-47e8-823d-0b6ff93bd566 weekly</li>
+                              <li>c4ae9a05-3da3-49cf-a306-70ce782524af monthly 768</li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="bg-pink-50 border border-pink-300 rounded p-2 mt-2">
+                          <p className="font-semibold text-pink-900 text-xs mb-1">Job Type Max Ages:</p>
+                          <ul className="text-xs text-gray-700 space-y-0.5 ml-3 list-disc">
+                            <li><span className="font-medium">hourly:</span> 2 hours (default)</li>
+                            <li><span className="font-medium">daily:</span> 25 hours (default)</li>
+                            <li><span className="font-medium">weekly:</span> 192 hours / 8 days (default)</li>
+                            <li><span className="font-medium">monthly:</span> 768 hours / 32 days (default)</li>
+                            <li><span className="font-medium">yearly:</span> 8784 hours / 366 days (default)</li>
+                          </ul>
+                          <p className="mt-2 text-xs font-medium text-pink-800">
+                            If max_age_hours is omitted, defaults are used based on job_type
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="p-3 border-t border-blue-200 bg-white/50">
@@ -430,6 +546,7 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
               <option value="windows">windows (PowerShell)</option>
               <option value="interface">interface (MikroTik)</option>
               <option value="service">service (MikroTik)</option>
+              <option value="backup">backup (rsnapshot)</option>
               <option value="process">process</option>
               <option value="custom">custom</option>
             </select>
@@ -437,6 +554,29 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
               Type is a label for organization. The check command determines how the service is monitored.
             </p>
           </div>
+
+          {formData.type === 'backup' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Job Type
+              </label>
+              <select
+                value={formData.job_type}
+                onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select job type...</option>
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Backup schedule type (used for determining max age thresholds)
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -448,10 +588,16 @@ export function ServiceForm({ serverId, service, onSubmit, onClose }: ServiceFor
               value={formData.check_command}
               onChange={(e) => setFormData({ ...formData, check_command: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              placeholder="systemctl is-active apache2"
+              placeholder={
+                formData.type === 'backup'
+                  ? 'ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25'
+                  : 'systemctl is-active apache2'
+              }
             />
             <p className="mt-1 text-xs text-gray-500">
-              Command to check if the service is running
+              {formData.type === 'backup'
+                ? 'Format: [UUID] [job_type] [max_age_hours]. Example: ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25'
+                : 'Command to check if the service is running'}
             </p>
           </div>
 

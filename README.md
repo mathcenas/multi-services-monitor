@@ -73,11 +73,12 @@ This starts both the frontend (port 5178) and backend (port 3001).
 
 ## Monitoring Agents
 
-Three monitoring agents are included to check services and report back to the API:
+Four monitoring agents are included to check services and report back to the API:
 
 - **`monitor-agent.sh`** - For Linux/Unix servers (Bash)
 - **`monitor-agent.ps1`** - For Windows servers (PowerShell)
 - **`monitor-agent-mikrotik.sh`** - For MikroTik RouterOS devices (via SSH)
+- **`monitor-agent-rsnapshot.sh`** - For OpenMediaVault rsnapshot backups (Log Parser)
 
 ### Quick Setup
 
@@ -105,6 +106,15 @@ export MIKROTIK_KEY="/root/.ssh/mikrotik_monitor"
 ./monitor-agent-mikrotik.sh
 ```
 
+**OpenMediaVault rsnapshot:**
+```bash
+export MONITOR_API_URL="https://stats.cenas-support.com"
+export SERVER_ID="3"
+export CHECK_INTERVAL="300"
+export RSNAPSHOT_LOG="/var/log/rsnapshot.log"
+./monitor-agent-rsnapshot.sh
+```
+
 ### Detailed Setup Instructions
 
 For complete installation and configuration instructions, including:
@@ -113,9 +123,12 @@ For complete installation and configuration instructions, including:
 - Disk monitoring configuration
 - MikroTik SSH setup and monitoring
 - CPU/RAM threshold configuration
+- rsnapshot backup monitoring
 - Troubleshooting tips
 
-**See the complete setup guide:** [MONITOR-AGENT-SETUP.md](./MONITOR-AGENT-SETUP.md)
+**See the complete setup guides:**
+- General Monitoring: [MONITOR-AGENT-SETUP.md](./MONITOR-AGENT-SETUP.md)
+- rsnapshot Backups: [RSNAPSHOT-MONITOR-SETUP.md](./RSNAPSHOT-MONITOR-SETUP.md)
 
 ## Configuration Examples
 
@@ -224,6 +237,49 @@ MikroTik monitoring is handled automatically by the `monitor-agent-mikrotik.sh` 
 - Name: Active Connections
 - Type: custom
 - Check Command: `/ip firewall connection print count-only`
+
+#### OpenMediaVault rsnapshot Backups
+
+The rsnapshot monitor agent parses log files to monitor backup jobs:
+
+**Daily Backup:**
+- Name: Client ABC Daily Backup
+- Type: backup
+- Job Type: daily
+- Check Command: `ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25`
+- Check Interval: 3600
+- Disk Path: `/mnt/backup`
+
+**Weekly Backup:**
+- Name: Client XYZ Weekly Backup
+- Type: backup
+- Job Type: weekly
+- Check Command: `f0fdd531-926e-47e8-823d-0b6ff93bd566 weekly`
+- Check Interval: 7200
+
+**Monthly Backup:**
+- Name: Archive Monthly Backup
+- Type: backup
+- Job Type: monthly
+- Check Command: `c4ae9a05-3da3-49cf-a306-70ce782524af monthly 768`
+- Check Interval: 14400
+- Disk Path: `/srv/dev-disk-by-uuid-xxx/backup`
+
+**Finding rsnapshot Job UUIDs:**
+```bash
+ls /var/lib/openmediavault/rsnapshot.d/
+# Look for: rsnapshot-[UUID].conf
+```
+
+**Check Command Format:**
+```
+[UUID] [job_type] [max_age_hours]
+```
+
+Example: `ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25`
+- UUID from config filename
+- job_type: hourly, daily, weekly, monthly, yearly
+- max_age_hours: optional (defaults: hourly=2h, daily=25h, weekly=192h, monthly=768h, yearly=8784h)
 
 ## Database
 
