@@ -164,6 +164,11 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
 
 {showAgentSetup && (() => {
         const hasWindowsServices = services.some(s => s.type === 'windows');
+        const hasBackupServices = services.some(s => s.type === 'backup');
+        const hasMikroTikServices = services.some(s => s.type === 'interface' || s.type === 'service');
+        const [selectedPlatform, setSelectedPlatform] = useState<'linux' | 'windows' | 'mikrotik' | 'rsnapshot'>(
+          hasBackupServices ? 'rsnapshot' : hasWindowsServices ? 'windows' : hasMikroTikServices ? 'mikrotik' : 'linux'
+        );
 
         return (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -179,6 +184,55 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
               </div>
               <div className="p-6 space-y-6">
                 <div>
+                  <h4 className="font-semibold text-gray-900 mb-3">Select Platform</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button
+                      onClick={() => setSelectedPlatform('linux')}
+                      className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                        selectedPlatform === 'linux'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-semibold">Linux/Unix</div>
+                      <div className="text-xs mt-1">Bash Script</div>
+                    </button>
+                    <button
+                      onClick={() => setSelectedPlatform('windows')}
+                      className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                        selectedPlatform === 'windows'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-semibold">Windows</div>
+                      <div className="text-xs mt-1">PowerShell</div>
+                    </button>
+                    <button
+                      onClick={() => setSelectedPlatform('mikrotik')}
+                      className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                        selectedPlatform === 'mikrotik'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-semibold">MikroTik</div>
+                      <div className="text-xs mt-1">RouterOS</div>
+                    </button>
+                    <button
+                      onClick={() => setSelectedPlatform('rsnapshot')}
+                      className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                        selectedPlatform === 'rsnapshot'
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-semibold">rsnapshot</div>
+                      <div className="text-xs mt-1">OMV Backups</div>
+                    </button>
+                  </div>
+                </div>
+                <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Server Information</h4>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2">
@@ -190,13 +244,13 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
                       <code className="font-mono text-gray-900">{server.name}</code>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-600">Platform:</span>
-                      <code className="font-mono text-gray-900">{hasWindowsServices ? 'Windows' : 'Linux/Unix'}</code>
+                      <span className="text-gray-600">Selected Platform:</span>
+                      <code className="font-mono text-gray-900">{selectedPlatform}</code>
                     </div>
                   </div>
                 </div>
 
-                {hasWindowsServices ? (
+                {selectedPlatform === 'windows' ? (
                   <>
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
@@ -264,7 +318,7 @@ nssm start MonitorAgent`}
                       </ul>
                     </div>
                   </>
-                ) : (
+                ) : selectedPlatform === 'linux' ? (
                   <>
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
@@ -362,7 +416,146 @@ sudo systemctl start monitor-agent`}
                       </ul>
                     </div>
                   </>
-                )}
+                ) : selectedPlatform === 'mikrotik' ? (
+                  <>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        SSH access to your MikroTik router with public key authentication configured
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">1. Set up SSH key authentication</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Generate an SSH key pair on your monitoring server:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`ssh-keygen -t rsa -b 2048 -f ~/.ssh/mikrotik_monitor
+# Upload public key to MikroTik RouterOS`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">2. Download and configure the agent</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Download the MikroTik monitoring script:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`curl -O ${window.location.origin}/monitor-agent-mikrotik.sh
+chmod +x monitor-agent-mikrotik.sh`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">3. Set environment variables</h4>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`export MONITOR_API_URL=${window.location.origin}
+export SERVER_ID=${server.id}
+export SERVER_NAME="${server.name}"
+export MIKROTIK_HOST="192.168.88.1"  # Your MikroTik IP
+export MIKROTIK_USER="admin"
+export MIKROTIK_KEY="~/.ssh/mikrotik_monitor"
+export CHECK_INTERVAL=60`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">4. Run the agent</h4>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`./monitor-agent-mikrotik.sh`}
+                      </pre>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-yellow-900 mb-2">What gets monitored</h4>
+                      <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>CPU and RAM usage (automatic)</li>
+                        <li>System uptime (automatic)</li>
+                        <li>RouterOS version (automatic)</li>
+                        <li>Network interfaces (add as services)</li>
+                        <li>IP services like SSH, API (add as services)</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : selectedPlatform === 'rsnapshot' ? (
+                  <>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Prerequisites (Required!)</h4>
+                      <p className="text-sm text-red-800 mb-3">
+                        OpenMediaVault server with rsnapshot plugin installed and configured
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">1. Find rsnapshot job UUIDs</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        On your OpenMediaVault server, find the job UUIDs:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`ls /var/lib/openmediavault/rsnapshot.d/
+# Look for: rsnapshot-[UUID].conf`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">2. Download the monitoring agent</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Download the rsnapshot monitor agent:
+                      </p>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`curl -O ${window.location.origin}/monitor-agent-rsnapshot.sh
+chmod +x monitor-agent-rsnapshot.sh`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">3. Configure environment variables</h4>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`export MONITOR_API_URL=${window.location.origin}
+export SERVER_ID=${server.id}
+export CHECK_INTERVAL=300
+export RSNAPSHOT_LOG="/var/log/rsnapshot.log"`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">4. Add backup jobs as services</h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        For each rsnapshot job, add a service with:
+                      </p>
+                      <div className="bg-white border border-purple-200 rounded-lg p-4 space-y-2 text-sm">
+                        <div><span className="font-semibold">Type:</span> backup</div>
+                        <div><span className="font-semibold">Job Type:</span> daily, weekly, monthly, etc.</div>
+                        <div><span className="font-semibold">Check Command:</span> [UUID] [job_type] [max_age_hours]</div>
+                        <div className="mt-2 text-xs text-gray-600">
+                          Example: <code className="bg-gray-100 px-2 py-1 rounded">ac1b4ee4-4a7d-4139-a01d-6aeb62df88b2 daily 25</code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">5. Run the agent</h4>
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto text-sm">
+{`./monitor-agent-rsnapshot.sh`}
+                      </pre>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-yellow-900 mb-2">Default Max Ages</h4>
+                      <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>Hourly: 2 hours</li>
+                        <li>Daily: 25 hours</li>
+                        <li>Weekly: 192 hours (8 days)</li>
+                        <li>Monthly: 768 hours (32 days)</li>
+                        <li>Yearly: 8784 hours (366 days)</li>
+                      </ul>
+                      <p className="mt-2 text-xs text-yellow-800">
+                        See <a href="/RSNAPSHOT-MONITOR-SETUP.md" className="underline" target="_blank">RSNAPSHOT-MONITOR-SETUP.md</a> for detailed setup instructions
+                      </p>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
