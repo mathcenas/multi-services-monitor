@@ -261,8 +261,9 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                         {server.services && server.services.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {server.services.map((service) => {
+                              const lastCheck = service.last_checked || service.last_check;
                               const isBackup = isBackupService(service.name);
-                              const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
+                              const backupStatus = isBackup ? getBackupAgeStatus(lastCheck) : null;
                               const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
                               const isExpanded = expandedServices.has(service.id);
 
@@ -329,15 +330,15 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                         </div>
                                       )}
 
-                                      {service.last_checked && (
+                                      {lastCheck && (
                                         <div className="flex items-center justify-between pt-1">
                                           <div>
                                             <span className="font-medium text-gray-600">Last:</span>{' '}
-                                            <span>{getRelativeTime(service.last_checked)} ago</span>
+                                            <span>{getRelativeTime(lastCheck)} ago</span>
                                           </div>
                                           <div>
                                             <span className="font-medium text-gray-600">Next:</span>{' '}
-                                            <span>{getNextCheckTime(service.last_checked, service.check_interval)}</span>
+                                            <span>{getNextCheckTime(lastCheck, service.check_interval)}</span>
                                           </div>
                                         </div>
                                       )}

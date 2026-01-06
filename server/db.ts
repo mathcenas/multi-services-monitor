@@ -187,4 +187,10 @@ if (!checkColumn('services', 'description')) {
   console.log('Migration completed: description column added');
 }
 
+if (!checkColumn('services', 'job_type')) {
+  console.log('Adding job_type column to services table...');
+  db.exec(`ALTER TABLE services ADD COLUMN job_type TEXT;`);
+  console.log('Migration completed: job_type column added');
+}
+
 export default db;

@@ -34,6 +34,7 @@ export interface Service {
   server_id: string;
   name: string;
   type?: string;
+  job_type?: string;
   status: string;
   check_command: string;
   description?: string;
@@ -55,6 +56,9 @@ export interface Service {
     date: string;
     uptime: number;
   }>;
+  current_status?: string;
+  current_message?: string;
+  last_checked?: string;
 }
 
 export interface ITService {

@@ -449,15 +449,16 @@ app.get('/api/health/service/:id', (req, res) => {
 
 app.post('/api/servers/:serverId/services', (req, res) => {
   try {
-    const { name, type, check_command, description, check_interval, disk_path, disk_threshold } = req.body;
+    const { name, type, job_type, check_command, description, check_interval, disk_path, disk_threshold } = req.body;
     const service = db.prepare(`
-      INSERT INTO services (server_id, name, type, check_command, description, check_interval, disk_path, disk_threshold)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO services (server_id, name, type, job_type, check_command, description, check_interval, disk_path, disk_threshold)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).get(
       req.params.serverId,
       name,
       type || 'systemd',
+      job_type ?? null,
       check_command,
       description ?? null,
       check_interval || 300,
@@ -474,16 +475,17 @@ app.post('/api/servers/:serverId/services', (req, res) => {
 
 app.put('/api/services/:id', (req, res) => {
   try {
-    const { name, type, check_command, status, description, check_interval, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check } = req.body;
+    const { name, type, job_type, check_command, status, description, check_interval, version, disk_path, disk_threshold, disk_usage, disk_total, disk_used, disk_available, message, last_check } = req.body;
     db.prepare(`
       UPDATE services
-      SET name = ?, type = ?, check_command = ?, status = ?, description = ?, check_interval = ?, version = ?,
+      SET name = ?, type = ?, job_type = ?, check_command = ?, status = ?, description = ?, check_interval = ?, version = ?,
           disk_path = ?, disk_threshold = ?, disk_usage = ?, disk_total = ?, disk_used = ?,
           disk_available = ?, message = ?, last_check = ?
       WHERE id = ?
     `).run(
       name,
       type || 'systemd',
+      job_type ?? null,
       check_command ?? null,
       status ?? null,
       description ?? null,

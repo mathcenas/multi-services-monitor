@@ -99,10 +99,13 @@ export function Dashboard() {
 
     servers.forEach(server => {
       server.services.forEach(service => {
+        const status = service.current_status || service.status;
+        const lastCheck = service.last_checked || service.last_check;
+
         totalServices++;
-        if (service.current_status === 'up' || service.current_status === 'active') {
+        if (status === 'up' || status === 'active') {
           activeServices++;
-        } else if (service.current_status === 'down' || service.current_status === 'inactive') {
+        } else if (status === 'down' || status === 'inactive') {
           downServices++;
         }
         if (isDiskCritical(service)) {
@@ -111,7 +114,7 @@ export function Dashboard() {
 
         if (isBackupService(service.name)) {
           totalBackups++;
-          const backupStatus = getBackupAgeStatus(service.last_checked);
+          const backupStatus = getBackupAgeStatus(lastCheck);
           if (backupStatus === 'fresh') freshBackups++;
           else if (backupStatus === 'aging') agingBackups++;
           else if (backupStatus === 'stale') staleBackups++;
@@ -128,8 +131,9 @@ export function Dashboard() {
 
     return servers.map(server => {
       const filteredServices = server.services.filter(service => {
+        const status = service.current_status || service.status;
         if (filterMode === 'issues') {
-          return service.current_status === 'down' || service.current_status === 'inactive' || isDiskCritical(service);
+          return status === 'down' || status === 'inactive' || isDiskCritical(service);
         }
         if (filterMode === 'critical-disks') {
           return isDiskCritical(service);
@@ -160,11 +164,15 @@ export function Dashboard() {
   };
 
   const renderService = (service: Service) => {
-    const isActive = service.current_status === 'up' || service.current_status === 'active';
-    const isDown = service.current_status === 'down' || service.current_status === 'inactive';
+    const status = service.current_status || service.status;
+    const message = service.current_message || service.message;
+    const lastCheck = service.last_checked || service.last_check;
+
+    const isActive = status === 'up' || status === 'active';
+    const isDown = status === 'down' || status === 'inactive';
     const hasDiskCritical = isDiskCritical(service);
     const isBackup = isBackupService(service.name);
-    const backupStatus = isBackup ? getBackupAgeStatus(service.last_checked) : null;
+    const backupStatus = isBackup ? getBackupAgeStatus(lastCheck) : null;
     const backupColors = backupStatus ? getBackupStatusColors(backupStatus) : null;
     const isExpanded = expandedServices.has(service.id);
 
@@ -201,9 +209,9 @@ export function Dashboard() {
                   {getBackupStatusLabel(backupStatus)}
                 </span>
               )}
-              {isBackup && service.current_message && (
+              {isBackup && message && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                  {service.current_message}
+                  {message}
                 </span>
               )}
               {service.version && (
@@ -232,13 +240,13 @@ export function Dashboard() {
               <span className="font-medium text-gray-600">Type:</span> <span className="font-medium">{service.type || 'systemd'}</span>
               {service.job_type && <span className="ml-2"><span className="font-medium text-gray-600">Job:</span> <span className="font-medium">{service.job_type}</span></span>}
             </div>
-            {service.current_status && (
+            {status && (
               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                 isActive ? 'bg-green-200 text-green-900' :
                 isDown ? 'bg-red-200 text-red-900' :
                 'bg-gray-200 text-gray-900'
               }`}>
-                {service.current_status.toUpperCase()}
+                {status.toUpperCase()}
               </span>
             )}
           </div>
@@ -250,15 +258,15 @@ export function Dashboard() {
             </div>
           )}
 
-          {service.last_checked && (
+          {lastCheck && (
             <div className="flex items-center justify-between pt-1">
               <div>
                 <span className="font-medium text-gray-600">Last:</span>{' '}
-                <span>{getRelativeTime(service.last_checked)} ago</span>
+                <span>{getRelativeTime(lastCheck)} ago</span>
               </div>
               <div>
                 <span className="font-medium text-gray-600">Next:</span>{' '}
-                <span>{getNextCheckTime(service.last_checked, service.check_interval)}</span>
+                <span>{getNextCheckTime(lastCheck, service.check_interval)}</span>
               </div>
             </div>
           )}
@@ -287,10 +295,10 @@ export function Dashboard() {
             </div>
           )}
 
-          {service.current_message && !isBackup && (
+          {message && !isBackup && (
             <div className="pt-1 border-t border-gray-300">
               <span className="font-medium text-gray-600">Message:</span>{' '}
-              <span className="italic">{service.current_message}</span>
+              <span className="italic">{message}</span>
             </div>
           )}
 
