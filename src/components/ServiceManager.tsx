@@ -19,10 +19,29 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
   const [showAgentSetup, setShowAgentSetup] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<'linux' | 'windows' | 'mikrotik' | 'rsnapshot'>('linux');
 
   useEffect(() => {
     loadServices();
   }, [server]);
+
+  useEffect(() => {
+    if (showAgentSetup) {
+      const hasWindowsServices = services.some(s => s.type === 'windows');
+      const hasBackupServices = services.some(s => s.type === 'backup');
+      const hasMikroTikServices = services.some(s => s.type === 'interface' || s.type === 'service');
+
+      if (hasBackupServices) {
+        setSelectedPlatform('rsnapshot');
+      } else if (hasWindowsServices) {
+        setSelectedPlatform('windows');
+      } else if (hasMikroTikServices) {
+        setSelectedPlatform('mikrotik');
+      } else {
+        setSelectedPlatform('linux');
+      }
+    }
+  }, [showAgentSetup, services]);
 
   const loadServices = async () => {
     try {
@@ -162,15 +181,7 @@ export function ServiceManager({ server, onBack }: ServiceManagerProps) {
         />
       )}
 
-{showAgentSetup && (() => {
-        const hasWindowsServices = services.some(s => s.type === 'windows');
-        const hasBackupServices = services.some(s => s.type === 'backup');
-        const hasMikroTikServices = services.some(s => s.type === 'interface' || s.type === 'service');
-        const [selectedPlatform, setSelectedPlatform] = useState<'linux' | 'windows' | 'mikrotik' | 'rsnapshot'>(
-          hasBackupServices ? 'rsnapshot' : hasWindowsServices ? 'windows' : hasMikroTikServices ? 'mikrotik' : 'linux'
-        );
-
-        return (
+{showAgentSetup && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-auto">
               <div className="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
@@ -559,8 +570,7 @@ export RSNAPSHOT_LOG="/var/log/rsnapshot.log"`}
               </div>
             </div>
           </div>
-        );
-      })()}
+)}
 
       {showConfig && config && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
