@@ -38,7 +38,8 @@ COPY --from=builder /app/dist ./dist
 COPY monitor-agent.sh ./
 COPY monitor-agent.ps1 ./
 COPY monitor-agent-mikrotik.sh ./
-RUN chmod +x monitor-agent.sh monitor-agent-mikrotik.sh
+COPY monitor-agent-rsnapshot.sh ./
+RUN chmod +x monitor-agent.sh monitor-agent-mikrotik.sh monitor-agent-rsnapshot.sh
 
 ENV NODE_ENV=production
 ENV PORT=3001
