@@ -3,7 +3,7 @@
 # OpenMediaVault rsnapshot Monitor Agent
 # This agent monitors rsnapshot backup jobs via log files
 
-AGENT_VERSION="1.1.1"
+AGENT_VERSION="1.2.0"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -225,18 +225,17 @@ check_disk_space() {
 }
 
 send_status() {
-    local server_name=$1
-    local service_name=$2
-    local status=$3
-    local message=$4
-    local backup_age_hours=$5
-    local disk_info=$6
+    local service_name=$1
+    local status=$2
+    local message=$3
+    local backup_age_hours=$4
+    local disk_info=$5
 
     # Escape JSON special characters
     message=$(echo "$message" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\r/\\r/g; s/\n/\\n/g')
 
     local json_data="{
-        \"server_name\": \"${server_name}\",
+        \"server_id\": \"${SERVER_ID}\",
         \"service_name\": \"${service_name}\",
         \"status\": \"${status}\",
         \"message\": \"${message}\""
@@ -318,7 +317,7 @@ check_all_services() {
             fi
         fi
 
-        send_status "$SERVER_NAME" "$service_name" "$status" "$message" "$backup_age" "$disk_info"
+        send_status "$service_name" "$status" "$message" "$backup_age" "$disk_info"
 
         echo "  Status: ${status}"
         echo "  Message: ${message}"

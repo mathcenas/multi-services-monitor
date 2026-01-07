@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.1.0"
+AGENT_VERSION="1.2.0"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -250,15 +250,14 @@ get_service_version() {
 }
 
 send_status() {
-    local server_name=$1
-    local service_name=$2
-    local status=$3
-    local message=$4
-    local version=$5
-    local disk_info=$6
+    local service_name=$1
+    local status=$2
+    local message=$3
+    local version=$4
+    local disk_info=$5
 
     local json_data="{
-        \"server_name\": \"${server_name}\",
+        \"server_id\": \"${SERVER_ID}\",
         \"service_name\": \"${service_name}\",
         \"status\": \"${status}\",
         \"message\": \"${message}\""
@@ -338,7 +337,7 @@ check_all_services() {
         fi
 
         message="Checked at $(date)"
-        send_status "$SERVER_NAME" "$service_name" "$status" "$message" "$version" "$disk_info"
+        send_status "$service_name" "$status" "$message" "$version" "$disk_info"
 
         echo "  Status: ${status}"
         if [ -n "$version" ]; then
