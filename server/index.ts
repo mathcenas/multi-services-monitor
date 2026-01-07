@@ -559,17 +559,19 @@ app.post('/api/status', (req, res) => {
 
     db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
 
-    const service = db.prepare('SELECT id FROM services WHERE server_id = ? AND name = ? COLLATE NOCASE').get((server as any).id, service_name);
+    const service = db.prepare('SELECT id, name FROM services WHERE server_id = ? AND (name = ? COLLATE NOCASE OR TRIM(name) = ? COLLATE NOCASE)').get((server as any).id, service_name, service_name.trim());
     if (!service) {
       const availableServices = db.prepare('SELECT name FROM services WHERE server_id = ?').all((server as any).id);
       const serviceList = availableServices.map((s: any) => `"${s.name}"`).join(', ');
-      console.error(`Service "${service_name}" not found on server "${(server as any).name}"`);
+      console.error(`Service "${service_name}" not found on server "${(server as any).name}" (ID: ${(server as any).id})`);
       console.log('Available services:', availableServices);
+      console.log('Attempted service name:', JSON.stringify(service_name), 'Length:', service_name.length);
       return res.status(404).json({
         error: 'Service not found',
         service_name,
         server_name: (server as any).name,
-        hint: `Available services: ${serviceList || 'No services configured'}`
+        server_id: (server as any).id,
+        hint: `Available services on "${(server as any).name}": ${serviceList || 'No services configured'}. Check service name matches exactly.`
       });
     }
 
