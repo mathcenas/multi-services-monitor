@@ -3,10 +3,15 @@
 # MikroTik Monitoring Agent
 # Monitors MikroTik RouterOS devices via SSH
 
+AGENT_VERSION="1.1.0"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
+BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME="${SERVER_NAME:-mikrotik}"
 SERVER_ID="${SERVER_ID:-1}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
+AUTO_UPDATE="${AUTO_UPDATE:-true}"
+UPDATE_CHECK_INTERVAL="${UPDATE_CHECK_INTERVAL:-86400}"
+LAST_UPDATE_CHECK_FILE="/tmp/monitor-agent-mikrotik-last-update-check"
 
 # MikroTik SSH connection details
 MIKROTIK_HOST="${MIKROTIK_HOST:-192.168.88.1}"
@@ -27,6 +32,86 @@ ssh_command() {
     else
         ssh -p "$MIKROTIK_PORT" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${MIKROTIK_USER}@${MIKROTIK_HOST}" "$command" 2>/dev/null
     fi
+}
+
+check_for_update() {
+    if [ "$AUTO_UPDATE" != "true" ]; then
+        return 0
+    fi
+
+    local current_time=$(date +%s)
+    local last_check=0
+
+    if [ -f "$LAST_UPDATE_CHECK_FILE" ]; then
+        last_check=$(cat "$LAST_UPDATE_CHECK_FILE" 2>/dev/null || echo "0")
+    fi
+
+    local time_since_check=$((current_time - last_check))
+
+    if [ $time_since_check -lt $UPDATE_CHECK_INTERVAL ]; then
+        return 0
+    fi
+
+    echo "$current_time" > "$LAST_UPDATE_CHECK_FILE"
+
+    echo "Checking for agent updates..."
+    local version_info=$(curl -s "${API_URL}/agent-version" 2>/dev/null)
+
+    if [ -z "$version_info" ]; then
+        echo "Failed to check for updates"
+        return 1
+    fi
+
+    local latest_version=$(echo "$version_info" | grep -o '"monitor-agent-mikrotik.sh":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$latest_version" ]; then
+        echo "Failed to parse version information"
+        return 1
+    fi
+
+    if [ "$latest_version" != "$AGENT_VERSION" ]; then
+        echo "New version available: $latest_version (current: $AGENT_VERSION)"
+        perform_update
+        return $?
+    else
+        echo "Agent is up to date (version $AGENT_VERSION)"
+        return 0
+    fi
+}
+
+perform_update() {
+    echo "Downloading new agent version..."
+
+    local script_path=$(readlink -f "$0")
+    local backup_path="${script_path}.backup"
+    local temp_path="${script_path}.new"
+
+    if ! curl -f -s -o "$temp_path" "${BASE_URL}/monitor-agent-mikrotik.sh"; then
+        echo "Failed to download new version"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    if [ ! -s "$temp_path" ]; then
+        echo "Downloaded file is empty"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    if ! head -n 1 "$temp_path" | grep -q "^#!/bin/bash"; then
+        echo "Downloaded file is not a valid bash script"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    cp "$script_path" "$backup_path"
+    chmod +x "$temp_path"
+    mv "$temp_path" "$script_path"
+
+    echo "Update completed successfully!"
+    echo "Restarting agent with new version..."
+
+    exec "$script_path" "$@"
 }
 
 get_system_resources() {
@@ -277,20 +362,25 @@ main() {
     echo "======================================"
     echo "MikroTik Monitoring Agent Starting..."
     echo "======================================"
+    echo "Agent Version: ${AGENT_VERSION}"
     echo "API URL: ${API_URL}"
     echo "Server ID: ${SERVER_ID}"
     echo "Server Name: ${SERVER_NAME}"
     echo "MikroTik Host: ${MIKROTIK_HOST}:${MIKROTIK_PORT}"
     echo "MikroTik User: ${MIKROTIK_USER}"
     echo "Check Interval: ${CHECK_INTERVAL} seconds"
+    echo "Auto-Update: ${AUTO_UPDATE}"
     echo "CPU Thresholds: Warning ${CPU_WARNING}%, Critical ${CPU_CRITICAL}%"
     echo "RAM Thresholds: Warning ${RAM_WARNING}%, Critical ${RAM_CRITICAL}%"
     echo ""
+
+    check_for_update
 
     while true; do
         monitor_system_resources
         echo ""
         check_configured_services
+        check_for_update
         echo ""
         echo "Waiting ${CHECK_INTERVAL} seconds before next check..."
         sleep "$CHECK_INTERVAL"

@@ -5,8 +5,12 @@ param(
     [string]$ApiUrl = $env:MONITOR_API_URL,
     [string]$ServerId = $env:SERVER_ID,
     [string]$ServerName = $env:SERVER_NAME,
-    [int]$CheckInterval = 60
+    [int]$CheckInterval = 60,
+    [bool]$AutoUpdate = $true,
+    [int]$UpdateCheckInterval = 86400
 )
+
+$AgentVersion = "1.1.0"
 
 if ([string]::IsNullOrEmpty($ApiUrl)) {
     $ApiUrl = "https://stats.cenas-support.com"
@@ -35,6 +39,105 @@ function Fetch-Config {
     catch {
         Write-Host "Failed to fetch configuration: $_" -ForegroundColor Red
         return $null
+    }
+}
+
+function Check-ForUpdate {
+    if (-not $AutoUpdate) {
+        return
+    }
+
+    $lastUpdateCheckFile = "$env:TEMP\monitor-agent-last-update-check.txt"
+    $currentTime = [int][double]::Parse((Get-Date -UFormat %s))
+    $lastCheck = 0
+
+    if (Test-Path $lastUpdateCheckFile) {
+        try {
+            $lastCheck = [int](Get-Content $lastUpdateCheckFile -ErrorAction SilentlyContinue)
+        }
+        catch {
+            $lastCheck = 0
+        }
+    }
+
+    $timeSinceCheck = $currentTime - $lastCheck
+
+    if ($timeSinceCheck -lt $UpdateCheckInterval) {
+        return
+    }
+
+    Set-Content -Path $lastUpdateCheckFile -Value $currentTime
+
+    Write-Host "Checking for agent updates..." -ForegroundColor Cyan
+
+    try {
+        $versionInfo = Invoke-RestMethod -Uri "$ApiUrl/api/agent-version" -Method Get -ErrorAction Stop
+        $latestVersion = $versionInfo.'monitor-agent.ps1'
+
+        if ([string]::IsNullOrEmpty($latestVersion)) {
+            Write-Host "Failed to parse version information" -ForegroundColor Yellow
+            return
+        }
+
+        if ($latestVersion -ne $AgentVersion) {
+            Write-Host "New version available: $latestVersion (current: $AgentVersion)" -ForegroundColor Green
+            Perform-Update
+        }
+        else {
+            Write-Host "Agent is up to date (version $AgentVersion)" -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Host "Failed to check for updates: $_" -ForegroundColor Yellow
+    }
+}
+
+function Perform-Update {
+    Write-Host "Downloading new agent version..." -ForegroundColor Cyan
+
+    try {
+        $scriptPath = $PSCommandPath
+        $backupPath = "$scriptPath.backup"
+        $tempPath = "$scriptPath.new"
+
+        Invoke-WebRequest -Uri "$ApiUrl/monitor-agent.ps1" -OutFile $tempPath -ErrorAction Stop
+
+        if (-not (Test-Path $tempPath) -or (Get-Item $tempPath).Length -eq 0) {
+            Write-Host "Downloaded file is empty or not found" -ForegroundColor Red
+            if (Test-Path $tempPath) { Remove-Item $tempPath -Force }
+            return
+        }
+
+        $content = Get-Content $tempPath -First 5 -ErrorAction Stop
+        if ($content[0] -notmatch "^#.*PowerShell") {
+            Write-Host "Downloaded file is not a valid PowerShell script" -ForegroundColor Red
+            Remove-Item $tempPath -Force
+            return
+        }
+
+        Copy-Item $scriptPath $backupPath -Force
+        Move-Item $tempPath $scriptPath -Force
+
+        Write-Host "Update completed successfully!" -ForegroundColor Green
+        Write-Host "Restarting agent with new version..." -ForegroundColor Cyan
+
+        $params = @{
+            ApiUrl = $ApiUrl
+            ServerId = $ServerId
+            ServerName = $ServerName
+            CheckInterval = $CheckInterval
+            AutoUpdate = $AutoUpdate
+            UpdateCheckInterval = $UpdateCheckInterval
+        }
+
+        Start-Process powershell -ArgumentList "-File `"$scriptPath`"" -NoNewWindow
+        exit
+    }
+    catch {
+        Write-Host "Failed to update agent: $_" -ForegroundColor Red
+        if (Test-Path $tempPath) {
+            Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -501,15 +604,20 @@ function Main {
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "Windows Monitoring Agent Starting..." -ForegroundColor Cyan
     Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host "Agent Version: $AgentVersion"
     Write-Host "API URL: $ApiUrl"
     Write-Host "Server ID: $ServerId"
     Write-Host "Server Name: $ServerName"
     Write-Host "Check Interval: $CheckInterval seconds"
+    Write-Host "Auto-Update: $AutoUpdate"
     Write-Host ""
+
+    Check-ForUpdate
 
     while ($true) {
         try {
             Check-AllServices
+            Check-ForUpdate
             Write-Host ""
             Write-Host "Waiting $CheckInterval seconds before next check..." -ForegroundColor Yellow
             Start-Sleep -Seconds $CheckInterval

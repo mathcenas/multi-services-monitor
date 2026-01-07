@@ -67,6 +67,16 @@ app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
   }
 });
 
+app.get('/api/agent-version', (req, res) => {
+  const versions = {
+    'monitor-agent.sh': '1.1.0',
+    'monitor-agent.ps1': '1.1.0',
+    'monitor-agent-mikrotik.sh': '1.1.0',
+    'monitor-agent-rsnapshot.sh': '1.1.0'
+  };
+  res.json(versions);
+});
+
 app.get('/api/clients', (req, res) => {
   try {
     const clients = db.prepare(`
