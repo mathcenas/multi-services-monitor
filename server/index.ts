@@ -539,7 +539,25 @@ app.delete('/api/services/:id', (req, res) => {
 
 app.post('/api/status', (req, res) => {
   try {
-    const { server_id, server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available, agent_version, agent_type } = req.body;
+    const {
+      server_id,
+      server_name,
+      service_name,
+      status,
+      message,
+      version,
+      disk_usage,
+      disk_total,
+      disk_used,
+      disk_available,
+      agent_version,
+      agent_type,
+      cpu_usage,
+      memory_usage,
+      memory_total_mb,
+      memory_used_mb,
+      memory_available_mb
+    } = req.body;
 
     let server;
     if (server_id) {
@@ -575,6 +593,31 @@ app.post('/api/status', (req, res) => {
     if (agent_type) {
       serverUpdateFields.push('agent_type = ?');
       serverUpdateValues.push(agent_type);
+    }
+
+    if (cpu_usage !== undefined) {
+      serverUpdateFields.push('cpu_usage = ?');
+      serverUpdateValues.push(cpu_usage);
+    }
+
+    if (memory_usage !== undefined) {
+      serverUpdateFields.push('memory_usage = ?');
+      serverUpdateValues.push(memory_usage);
+    }
+
+    if (memory_total_mb !== undefined) {
+      serverUpdateFields.push('memory_total_mb = ?');
+      serverUpdateValues.push(memory_total_mb);
+    }
+
+    if (memory_used_mb !== undefined) {
+      serverUpdateFields.push('memory_used_mb = ?');
+      serverUpdateValues.push(memory_used_mb);
+    }
+
+    if (memory_available_mb !== undefined) {
+      serverUpdateFields.push('memory_available_mb = ?');
+      serverUpdateValues.push(memory_available_mb);
     }
 
     serverUpdateValues.push((server as any).id);

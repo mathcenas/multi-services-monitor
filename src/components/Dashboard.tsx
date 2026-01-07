@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { getDashboard } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle, Info, Terminal } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle, Info, Terminal, Cpu, MemoryStick } from 'lucide-react';
 import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel, isAgentOutdated, getLatestAgentVersion, getAgentDisplayName } from '../utils';
 
 type FilterMode = 'all' | 'issues' | 'critical-disks';
@@ -628,6 +628,31 @@ export function Dashboard() {
                               </span>
                             )}
                           </p>
+                        )}
+                        {(server.cpu_usage !== undefined || server.memory_usage !== undefined) && (
+                          <div className="flex items-center gap-3 mt-1.5 text-xs">
+                            {server.cpu_usage !== undefined && (
+                              <div className="flex items-center gap-1.5">
+                                <Cpu size={14} className={server.cpu_usage > 80 ? 'text-red-600' : server.cpu_usage > 60 ? 'text-orange-600' : 'text-blue-600'} />
+                                <span className={`font-medium ${server.cpu_usage > 80 ? 'text-red-700' : server.cpu_usage > 60 ? 'text-orange-700' : 'text-gray-700'}`}>
+                                  CPU: {server.cpu_usage.toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
+                            {server.memory_usage !== undefined && (
+                              <div className="flex items-center gap-1.5">
+                                <MemoryStick size={14} className={server.memory_usage > 80 ? 'text-red-600' : server.memory_usage > 70 ? 'text-orange-600' : 'text-green-600'} />
+                                <span className={`font-medium ${server.memory_usage > 80 ? 'text-red-700' : server.memory_usage > 70 ? 'text-orange-700' : 'text-gray-700'}`}>
+                                  Memory: {server.memory_usage.toFixed(1)}%
+                                </span>
+                                {server.memory_used_mb && server.memory_total_mb && (
+                                  <span className="text-gray-500">
+                                    ({Math.round(server.memory_used_mb / 1024)}GB / {Math.round(server.memory_total_mb / 1024)}GB)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

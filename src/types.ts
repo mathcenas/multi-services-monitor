@@ -23,6 +23,11 @@ export interface Server {
   notes?: string;
   agent_version?: string;
   agent_type?: string;
+  cpu_usage?: number;
+  memory_usage?: number;
+  memory_total_mb?: number;
+  memory_used_mb?: number;
+  memory_available_mb?: number;
   created_at: string;
   updated_at: string;
   client?: Client;

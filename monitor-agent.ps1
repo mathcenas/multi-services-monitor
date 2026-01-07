@@ -489,6 +489,32 @@ function Get-ServiceVersion {
     return $version
 }
 
+function Get-SystemMetrics {
+    try {
+        $counters = Get-Counter '\Processor(_Total)\% Processor Time','\Memory\Available MBytes' -ErrorAction Stop
+
+        $cpuUsage = ($counters.CounterSamples | Where-Object { $_.Path -like "*processor*" }).CookedValue
+        $availableMemoryMB = ($counters.CounterSamples | Where-Object { $_.Path -like "*memory*" }).CookedValue
+
+        # Get total physical memory
+        $totalMemoryMB = (Get-CimInstance -ClassName Win32_ComputerSystem).TotalPhysicalMemory / 1MB
+        $usedMemoryMB = $totalMemoryMB - $availableMemoryMB
+        $memoryUsagePercent = ($usedMemoryMB / $totalMemoryMB) * 100
+
+        return @{
+            cpu_usage = [math]::Round($cpuUsage, 1)
+            memory_usage = [math]::Round($memoryUsagePercent, 1)
+            memory_total_mb = [math]::Round($totalMemoryMB, 0)
+            memory_used_mb = [math]::Round($usedMemoryMB, 0)
+            memory_available_mb = [math]::Round($availableMemoryMB, 0)
+        }
+    }
+    catch {
+        Write-Host "Failed to get system metrics: $_" -ForegroundColor Yellow
+        return $null
+    }
+}
+
 function Send-Status {
     param(
         [string]$ServerName,
@@ -496,7 +522,8 @@ function Send-Status {
         [string]$Status,
         [string]$Message,
         [string]$Version,
-        $DiskInfo
+        $DiskInfo,
+        $SystemMetrics
     )
 
     $payload = @{
@@ -515,6 +542,14 @@ function Send-Status {
         $payload.disk_total = $DiskInfo.total
         $payload.disk_used = $DiskInfo.used
         $payload.disk_available = $DiskInfo.available
+    }
+
+    if ($SystemMetrics -and $SystemMetrics -is [hashtable]) {
+        $payload.cpu_usage = $SystemMetrics.cpu_usage
+        $payload.memory_usage = $SystemMetrics.memory_usage
+        $payload.memory_total_mb = $SystemMetrics.memory_total_mb
+        $payload.memory_used_mb = $SystemMetrics.memory_used_mb
+        $payload.memory_available_mb = $SystemMetrics.memory_available_mb
     }
 
     try {
@@ -548,6 +583,12 @@ function Check-AllServices {
 
     $serviceCount = $config.services.Count
     Write-Host "Configuration received, checking $serviceCount service(s)..." -ForegroundColor Green
+
+    # Get system metrics once per check cycle
+    $systemMetrics = Get-SystemMetrics
+    if ($systemMetrics) {
+        Write-Host "System Metrics: CPU: $($systemMetrics.cpu_usage)% | Memory: $($systemMetrics.memory_usage)% ($($systemMetrics.memory_used_mb)MB / $($systemMetrics.memory_total_mb)MB)" -ForegroundColor Cyan
+    }
 
     foreach ($service in $config.services) {
         $serviceName = $service.name
@@ -586,7 +627,7 @@ function Check-AllServices {
             $message = $customMessage
         }
 
-        Send-Status -ServerName $ServerName -ServiceName $serviceName -Status $status -Message $message -Version $version -DiskInfo $diskInfo
+        Send-Status -ServerName $ServerName -ServiceName $serviceName -Status $status -Message $message -Version $version -DiskInfo $diskInfo -SystemMetrics $systemMetrics
 
         Write-Host "  Status: $status" -ForegroundColor $(if ($status -eq "active") { "Green" } else { "Red" })
         if (-not [string]::IsNullOrEmpty($customMessage)) {

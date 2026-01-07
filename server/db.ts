@@ -202,4 +202,16 @@ if (!checkColumn('servers', 'agent_version')) {
   console.log('Migration completed: agent tracking columns added');
 }
 
+if (!checkColumn('servers', 'cpu_usage')) {
+  console.log('Adding system metrics columns to servers table...');
+  db.exec(`
+    ALTER TABLE servers ADD COLUMN cpu_usage REAL;
+    ALTER TABLE servers ADD COLUMN memory_usage REAL;
+    ALTER TABLE servers ADD COLUMN memory_total_mb INTEGER;
+    ALTER TABLE servers ADD COLUMN memory_used_mb INTEGER;
+    ALTER TABLE servers ADD COLUMN memory_available_mb INTEGER;
+  `);
+  console.log('Migration completed: system metrics columns added');
+}
+
 export default db;
