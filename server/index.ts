@@ -69,10 +69,10 @@ app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
 
 app.get('/api/agent-version', (req, res) => {
   const versions = {
-    'monitor-agent.sh': '1.1.0',
+    'monitor-agent.sh': '1.2.0',
     'monitor-agent.ps1': '1.1.0',
     'monitor-agent-mikrotik.sh': '1.1.0',
-    'monitor-agent-rsnapshot.sh': '1.1.1'
+    'monitor-agent-rsnapshot.sh': '1.2.0'
   };
   res.json(versions);
 });
@@ -539,40 +539,46 @@ app.delete('/api/services/:id', (req, res) => {
 
 app.post('/api/status', (req, res) => {
   try {
-    const { server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
+    const { server_id, server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
 
-    let server = db.prepare('SELECT id, name FROM servers WHERE name = ? COLLATE NOCASE').get(server_name);
-    if (!server) {
-      server = db.prepare('SELECT id, name FROM servers WHERE hostname = ? COLLATE NOCASE').get(server_name);
+    let server;
+    if (server_id) {
+      server = db.prepare('SELECT id, name FROM servers WHERE id = ?').get(server_id);
+    } else if (server_name) {
+      server = db.prepare('SELECT id, name FROM servers WHERE name = ? COLLATE NOCASE').get(server_name);
+      if (!server) {
+        server = db.prepare('SELECT id, name FROM servers WHERE hostname = ? COLLATE NOCASE').get(server_name);
+      }
     }
+
     if (!server) {
       const availableServers = db.prepare('SELECT id, name, hostname FROM servers').all();
-      console.error('Server not found for name:', server_name);
+      console.error('Server not found. Provided server_id:', server_id, 'server_name:', server_name);
       console.log('Available servers:', availableServers);
-      const serverList = availableServers.map((s: any) => `"${s.name}"${s.hostname ? ` (hostname: "${s.hostname}")` : ''}`).join(', ');
+      const serverList = availableServers.map((s: any) => `"${s.name}" (ID: ${s.id})${s.hostname ? ` (hostname: "${s.hostname}")` : ''}`).join(', ');
       return res.status(404).json({
         error: 'Server not found',
+        server_id,
         server_name,
-        hint: `Set SERVER_NAME to one of: ${serverList || 'No servers configured'}`
+        hint: `Available servers: ${serverList || 'No servers configured'}`
       });
     }
 
     db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
 
-    const service = db.prepare('SELECT id, name FROM services WHERE server_id = ? AND (name = ? COLLATE NOCASE OR TRIM(name) = ? COLLATE NOCASE)').get((server as any).id, service_name, service_name.trim());
+    let service = db.prepare('SELECT id, name FROM services WHERE server_id = ? AND (name = ? COLLATE NOCASE OR TRIM(name) = ? COLLATE NOCASE)').get((server as any).id, service_name, service_name.trim());
+
     if (!service) {
-      const availableServices = db.prepare('SELECT name FROM services WHERE server_id = ?').all((server as any).id);
-      const serviceList = availableServices.map((s: any) => `"${s.name}"`).join(', ');
-      console.error(`Service "${service_name}" not found on server "${(server as any).name}" (ID: ${(server as any).id})`);
-      console.log('Available services:', availableServices);
-      console.log('Attempted service name:', JSON.stringify(service_name), 'Length:', service_name.length);
-      return res.status(404).json({
-        error: 'Service not found',
-        service_name,
-        server_name: (server as any).name,
-        server_id: (server as any).id,
-        hint: `Available services on "${(server as any).name}": ${serviceList || 'No services configured'}. Check service name matches exactly.`
-      });
+      console.log(`Service "${service_name}" not found on server "${(server as any).name}" (ID: ${(server as any).id}). Auto-creating service...`);
+
+      const newService = db.prepare(`
+        INSERT INTO services (server_id, name, type, status, check_command, check_interval)
+        VALUES (?, ?, 'systemd', ?, '', 300)
+        RETURNING *
+      `).get((server as any).id, service_name, status);
+
+      service = newService as any;
+      console.log(`Auto-created service "${service_name}" with ID ${(service as any).id}`);
     }
 
     const updateFields = ['status = ?', 'message = ?', 'last_check = CURRENT_TIMESTAMP'];
