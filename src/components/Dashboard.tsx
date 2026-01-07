@@ -163,7 +163,7 @@ export function Dashboard() {
     return `${minutes}m`;
   };
 
-  const renderService = (service: Service) => {
+  const renderService = (service: Service, server: DashboardServer) => {
     const status = service.current_status || service.status;
     const message = service.current_message || service.message;
     const lastCheck = service.last_checked || service.last_check;
@@ -196,6 +196,11 @@ export function Dashboard() {
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
+            {server.client && (
+              <p className="text-xs text-gray-600 mb-1">
+                <span className="font-medium">{server.client.name}</span> • {server.name}
+              </p>
+            )}
             <div className="flex flex-wrap gap-1 mt-1">
               {hasDiskCritical && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
@@ -562,14 +567,14 @@ export function Dashboard() {
                           {type}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {services.map(service => renderService(service))}
+                          {services.map(service => renderService(service, server))}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {server.services.map(service => renderService(service))}
+                    {server.services.map(service => renderService(service, server))}
                   </div>
                 )}
                 </div>
