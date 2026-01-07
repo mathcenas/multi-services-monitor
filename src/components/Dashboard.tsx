@@ -527,7 +527,11 @@ export function Dashboard() {
                       {statusIcon}
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">{server.name}</h3>
-                        <p className="text-sm text-gray-600">{server.hostname} • {server.cloud_provider}</p>
+                        <p className="text-sm text-gray-600">
+                          {server.client && <span className="font-medium text-blue-600">{server.client.name}</span>}
+                          {server.client && ' • '}
+                          {server.hostname} • {server.cloud_provider}
+                        </p>
                       </div>
                     </div>
                   </div>
