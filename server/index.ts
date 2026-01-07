@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync } from 'fs';
 import db from './db.js';
 import { getLatestVersion, getAllLatestVersions } from './version-checker.js';
 
@@ -27,10 +26,9 @@ const distPath = path.join(__dirname, '..');
 app.get('/monitor-agent.sh', (req, res) => {
   try {
     const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.sh');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
-    res.send(script);
+    res.sendFile(scriptPath);
   } catch (error) {
     res.status(404).json({ error: 'Monitor agent script not found' });
   }
@@ -39,10 +37,9 @@ app.get('/monitor-agent.sh', (req, res) => {
 app.get('/monitor-agent.ps1', (req, res) => {
   try {
     const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.ps1');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.ps1"');
-    res.send(script);
+    res.sendFile(scriptPath);
   } catch (error) {
     res.status(404).json({ error: 'PowerShell monitor agent script not found' });
   }
@@ -51,12 +48,22 @@ app.get('/monitor-agent.ps1', (req, res) => {
 app.get('/monitor-agent-mikrotik.sh', (req, res) => {
   try {
     const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-mikrotik.sh');
-    const script = readFileSync(scriptPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-mikrotik.sh"');
-    res.send(script);
+    res.sendFile(scriptPath);
   } catch (error) {
     res.status(404).json({ error: 'MikroTik monitor agent script not found' });
+  }
+});
+
+app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-rsnapshot.sh');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-rsnapshot.sh"');
+    res.sendFile(scriptPath);
+  } catch (error) {
+    res.status(404).json({ error: 'Rsnapshot monitor agent script not found' });
   }
 });
 
