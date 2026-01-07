@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { getDashboard } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle, Info, Terminal } from 'lucide-react';
 import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel, isAgentOutdated, getLatestAgentVersion, getAgentDisplayName } from '../utils';
 
 type FilterMode = 'all' | 'issues' | 'critical-disks';
@@ -14,6 +14,7 @@ export function Dashboard() {
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [groupByType, setGroupByType] = useState(false);
+  const [showStatusHelp, setShowStatusHelp] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -311,8 +312,15 @@ export function Dashboard() {
             <>
               {service.check_command && (
                 <div className="pt-2 mt-1 border-t-2 border-gray-400">
-                  <span className="font-medium text-gray-600">Check Command:</span>
-                  <code className="block text-xs bg-white bg-opacity-50 px-2 py-1 rounded mt-1 break-all">{service.check_command}</code>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Terminal size={12} className="text-gray-600" />
+                    <span className="font-medium text-gray-600">Check Command:</span>
+                  </div>
+                  <code className="block text-xs bg-white bg-opacity-50 px-2 py-1 rounded break-all font-mono">{service.check_command}</code>
+                  <p className="text-xs text-gray-500 mt-1.5 italic">
+                    Status is <span className="font-semibold text-green-700">GREEN</span> if command exits with code 0 (or returns true),{' '}
+                    <span className="font-semibold text-red-700">RED</span> if non-zero (or returns false)
+                  </p>
                 </div>
               )}
               {service.check_interval && (
@@ -340,6 +348,13 @@ export function Dashboard() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Monitoring Dashboard</h2>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowStatusHelp(!showStatusHelp)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Info size={18} />
+            {showStatusHelp ? 'Hide' : 'How Status Works'}
+          </button>
           <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1">
             <button
               onClick={() => setFilterMode('all')}
@@ -392,6 +407,75 @@ export function Dashboard() {
           </button>
         </div>
       </div>
+
+      {showStatusHelp && (
+        <div className="mb-6 p-5 bg-blue-50 border-2 border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Terminal size={24} className="text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">How Status Checking Works</h3>
+
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="bg-white p-3 rounded border border-blue-200">
+                  <p className="font-semibold text-gray-900 mb-2">Each service has a check command that runs periodically:</p>
+                  <ul className="space-y-2 ml-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600 font-bold">✓</span>
+                      <span><span className="font-semibold text-green-700">GREEN (UP)</span> - Command exits with code 0 or returns true</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 font-bold">✗</span>
+                      <span><span className="font-semibold text-red-700">RED (DOWN)</span> - Command exits with non-zero code or returns false</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded border border-blue-200">
+                    <p className="font-semibold text-gray-900 mb-2">Linux Examples:</p>
+                    <code className="block text-xs bg-gray-50 px-2 py-1 rounded mb-1 font-mono">systemctl is-active apache2</code>
+                    <code className="block text-xs bg-gray-50 px-2 py-1 rounded mb-1 font-mono">docker ps --filter name=nginx -q</code>
+                    <code className="block text-xs bg-gray-50 px-2 py-1 rounded font-mono">curl -sf http://localhost/health</code>
+                  </div>
+
+                  <div className="bg-white p-3 rounded border border-blue-200">
+                    <p className="font-semibold text-gray-900 mb-2">Windows Examples:</p>
+                    <code className="block text-xs bg-gray-50 px-2 py-1 rounded mb-1 font-mono">(Get-Service "W3SVC").Status -eq "Running"</code>
+                    <code className="block text-xs bg-gray-50 px-2 py-1 rounded font-mono">Test-Path "C:\inetpub"</code>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-200">
+                  <p className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <Info size={14} className="text-blue-600" />
+                    View Check Commands
+                  </p>
+                  <p className="text-gray-600">Click any service card to expand and see its check command and interval.</p>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-blue-200">
+                  <p className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <Terminal size={14} className="text-blue-600" />
+                    View Agent Logs
+                  </p>
+                  <p className="text-gray-600 mb-2">Check agent logs for detailed status check results:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="font-medium">Linux:</span>
+                      <code className="block bg-gray-50 px-2 py-1 rounded mt-1 font-mono">sudo journalctl -u monitor-agent -f</code>
+                    </div>
+                    <div>
+                      <span className="font-medium">Windows:</span>
+                      <code className="block bg-gray-50 px-2 py-1 rounded mt-1 font-mono">Get-Service MonitorAgent</code>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 italic">See AGENT-LOGS.md for complete documentation</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
