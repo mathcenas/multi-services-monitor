@@ -3,7 +3,7 @@
 # OpenMediaVault rsnapshot Monitor Agent
 # This agent monitors rsnapshot backup jobs via log files
 
-AGENT_VERSION="1.1.0"
+AGENT_VERSION="1.1.1"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -231,6 +231,9 @@ send_status() {
     local message=$4
     local backup_age_hours=$5
     local disk_info=$6
+
+    # Escape JSON special characters
+    message=$(echo "$message" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\r/\\r/g; s/\n/\\n/g')
 
     local json_data="{
         \"server_name\": \"${server_name}\",

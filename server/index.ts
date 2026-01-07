@@ -72,7 +72,7 @@ app.get('/api/agent-version', (req, res) => {
     'monitor-agent.sh': '1.1.0',
     'monitor-agent.ps1': '1.1.0',
     'monitor-agent-mikrotik.sh': '1.1.0',
-    'monitor-agent-rsnapshot.sh': '1.1.0'
+    'monitor-agent-rsnapshot.sh': '1.1.1'
   };
   res.json(versions);
 });
