@@ -193,4 +193,13 @@ if (!checkColumn('services', 'job_type')) {
   console.log('Migration completed: job_type column added');
 }
 
+if (!checkColumn('servers', 'agent_version')) {
+  console.log('Adding agent tracking columns to servers table...');
+  db.exec(`
+    ALTER TABLE servers ADD COLUMN agent_version TEXT;
+    ALTER TABLE servers ADD COLUMN agent_type TEXT;
+  `);
+  console.log('Migration completed: agent tracking columns added');
+}
+
 export default db;

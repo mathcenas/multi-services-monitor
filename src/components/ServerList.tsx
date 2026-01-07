@@ -1,6 +1,7 @@
-import { Server as ServerIcon, Trash2 } from 'lucide-react';
+import { Server as ServerIcon, Trash2, AlertCircle } from 'lucide-react';
 import { Server } from '../types';
 import { deleteServer } from '../api';
+import { isAgentOutdated, getLatestAgentVersion, getAgentDisplayName } from '../utils';
 
 interface ServerListProps {
   servers: Server[];
@@ -124,6 +125,18 @@ export function ServerList({ servers, onSelectServer, onServerDeleted }: ServerL
               {server.ip_address && (
                 <div className="text-xs text-gray-500">
                   IP: {server.ip_address}
+                </div>
+              )}
+
+              {server.agent_type && server.agent_version && (
+                <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-100">
+                  {getAgentDisplayName(server.agent_type)} v{server.agent_version}
+                  {isAgentOutdated(server.agent_type, server.agent_version) && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-orange-600 font-medium">
+                      <AlertCircle size={12} />
+                      Update to v{getLatestAgentVersion(server.agent_type)}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

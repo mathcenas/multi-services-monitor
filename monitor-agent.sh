@@ -260,7 +260,9 @@ send_status() {
         \"server_id\": \"${SERVER_ID}\",
         \"service_name\": \"${service_name}\",
         \"status\": \"${status}\",
-        \"message\": \"${message}\""
+        \"message\": \"${message}\",
+        \"agent_version\": \"${AGENT_VERSION}\",
+        \"agent_type\": \"monitor-agent.sh\""
 
     if [ -n "$version" ]; then
         json_data="${json_data},

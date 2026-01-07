@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { getDashboard } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive } from 'lucide-react';
-import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel } from '../utils';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle } from 'lucide-react';
+import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel, isAgentOutdated, getLatestAgentVersion, getAgentDisplayName } from '../utils';
 
 type FilterMode = 'all' | 'issues' | 'critical-disks';
 
@@ -512,6 +512,9 @@ export function Dashboard() {
             statusIcon = <AlertTriangle size={20} className="text-orange-600" />;
           }
 
+          const agentOutdated = isAgentOutdated(server.agent_type, server.agent_version);
+          const latestVersion = getLatestAgentVersion(server.agent_type);
+
           return (
             <div key={server.id} className={`rounded-lg shadow-sm border-2 transition-all ${statusColor}`}>
               <div
@@ -532,10 +535,26 @@ export function Dashboard() {
                           {server.client && ' • '}
                           {server.hostname} • {server.cloud_provider}
                         </p>
+                        {server.agent_type && server.agent_version && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {getAgentDisplayName(server.agent_type)} v{server.agent_version}
+                            {agentOutdated && latestVersion && (
+                              <span className="ml-2 text-orange-600 font-medium">
+                                (Update available: v{latestVersion})
+                              </span>
+                            )}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
+                    {agentOutdated && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                        <AlertCircle size={14} />
+                        Agent Update
+                      </span>
+                    )}
                     {summary.down > 0 && (
                       <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                         {summary.down} down

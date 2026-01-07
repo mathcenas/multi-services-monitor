@@ -539,7 +539,7 @@ app.delete('/api/services/:id', (req, res) => {
 
 app.post('/api/status', (req, res) => {
   try {
-    const { server_id, server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available } = req.body;
+    const { server_id, server_name, service_name, status, message, version, disk_usage, disk_total, disk_used, disk_available, agent_version, agent_type } = req.body;
 
     let server;
     if (server_id) {
@@ -564,7 +564,21 @@ app.post('/api/status', (req, res) => {
       });
     }
 
-    db.prepare('UPDATE servers SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run((server as any).id);
+    const serverUpdateFields = ['last_seen = CURRENT_TIMESTAMP'];
+    const serverUpdateValues = [];
+
+    if (agent_version) {
+      serverUpdateFields.push('agent_version = ?');
+      serverUpdateValues.push(agent_version);
+    }
+
+    if (agent_type) {
+      serverUpdateFields.push('agent_type = ?');
+      serverUpdateValues.push(agent_type);
+    }
+
+    serverUpdateValues.push((server as any).id);
+    db.prepare(`UPDATE servers SET ${serverUpdateFields.join(', ')} WHERE id = ?`).run(...serverUpdateValues);
 
     let service = db.prepare('SELECT id, name FROM services WHERE server_id = ? AND (name = ? COLLATE NOCASE OR TRIM(name) = ? COLLATE NOCASE)').get((server as any).id, service_name, service_name.trim());
 

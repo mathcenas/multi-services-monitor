@@ -131,3 +131,41 @@ export function getBackupStatusLabel(status: BackupStatus): string {
       return 'Unknown';
   }
 }
+
+const LATEST_AGENT_VERSIONS: Record<string, string> = {
+  'monitor-agent.sh': '1.2.0',
+  'monitor-agent.ps1': '1.1.0',
+  'monitor-agent-mikrotik.sh': '1.1.0',
+  'monitor-agent-rsnapshot.sh': '1.2.0'
+};
+
+export function isAgentOutdated(agentType?: string, agentVersion?: string): boolean {
+  if (!agentType || !agentVersion) return false;
+
+  const latestVersion = LATEST_AGENT_VERSIONS[agentType];
+  if (!latestVersion) return false;
+
+  return agentVersion !== latestVersion;
+}
+
+export function getLatestAgentVersion(agentType?: string): string | null {
+  if (!agentType) return null;
+  return LATEST_AGENT_VERSIONS[agentType] || null;
+}
+
+export function getAgentDisplayName(agentType?: string): string {
+  if (!agentType) return 'Unknown';
+
+  switch (agentType) {
+    case 'monitor-agent.sh':
+      return 'Linux Agent';
+    case 'monitor-agent.ps1':
+      return 'Windows Agent';
+    case 'monitor-agent-mikrotik.sh':
+      return 'MikroTik Agent';
+    case 'monitor-agent-rsnapshot.sh':
+      return 'Rsnapshot Agent';
+    default:
+      return agentType;
+  }
+}

@@ -238,7 +238,9 @@ send_status() {
         \"server_id\": \"${SERVER_ID}\",
         \"service_name\": \"${service_name}\",
         \"status\": \"${status}\",
-        \"message\": \"${message}\""
+        \"message\": \"${message}\",
+        \"agent_version\": \"${AGENT_VERSION}\",
+        \"agent_type\": \"monitor-agent-rsnapshot.sh\""
 
     if [ -n "$backup_age_hours" ] && [ "$backup_age_hours" != "0" ]; then
         json_data="${json_data},

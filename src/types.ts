@@ -21,6 +21,8 @@ export interface Server {
   os_version?: string;
   last_seen?: string;
   notes?: string;
+  agent_version?: string;
+  agent_type?: string;
   created_at: string;
   updated_at: string;
   client?: Client;
