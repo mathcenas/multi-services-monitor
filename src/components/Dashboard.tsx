@@ -629,9 +629,9 @@ export function Dashboard() {
                             )}
                           </p>
                         )}
-                        {(server.cpu_usage !== undefined || server.memory_usage !== undefined) && (
+                        {(server.cpu_usage != null || server.memory_usage != null) && (
                           <div className="flex items-center gap-3 mt-1.5 text-xs">
-                            {server.cpu_usage !== undefined && (
+                            {server.cpu_usage != null && (
                               <div className="flex items-center gap-1.5">
                                 <Cpu size={14} className={server.cpu_usage > 80 ? 'text-red-600' : server.cpu_usage > 60 ? 'text-orange-600' : 'text-blue-600'} />
                                 <span className={`font-medium ${server.cpu_usage > 80 ? 'text-red-700' : server.cpu_usage > 60 ? 'text-orange-700' : 'text-gray-700'}`}>
@@ -639,7 +639,7 @@ export function Dashboard() {
                                 </span>
                               </div>
                             )}
-                            {server.memory_usage !== undefined && (
+                            {server.memory_usage != null && (
                               <div className="flex items-center gap-1.5">
                                 <MemoryStick size={14} className={server.memory_usage > 80 ? 'text-red-600' : server.memory_usage > 70 ? 'text-orange-600' : 'text-green-600'} />
                                 <span className={`font-medium ${server.memory_usage > 80 ? 'text-red-700' : server.memory_usage > 70 ? 'text-orange-700' : 'text-gray-700'}`}>
