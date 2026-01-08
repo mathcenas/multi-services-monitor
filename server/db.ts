@@ -87,12 +87,31 @@ db.exec(`
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS network_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id TEXT NOT NULL,
+    username TEXT,
+    hostname TEXT,
+    ip_address TEXT NOT NULL,
+    protocol TEXT NOT NULL,
+    share_name TEXT,
+    connected_at DATETIME,
+    disconnected_at DATETIME,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_servers_client_id ON servers(client_id);
   CREATE INDEX IF NOT EXISTS idx_services_server_id ON services(server_id);
   CREATE INDEX IF NOT EXISTS idx_it_services_client_id ON it_services_catalog(client_id);
   CREATE INDEX IF NOT EXISTS idx_clients_is_active ON clients(is_active);
   CREATE INDEX IF NOT EXISTS idx_service_status_service_id ON service_status(service_id);
   CREATE INDEX IF NOT EXISTS idx_service_status_checked_at ON service_status(checked_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_network_connections_server_id ON network_connections(server_id);
+  CREATE INDEX IF NOT EXISTS idx_network_connections_is_active ON network_connections(is_active);
+  CREATE INDEX IF NOT EXISTS idx_network_connections_last_seen ON network_connections(last_seen DESC);
 
   CREATE TRIGGER IF NOT EXISTS update_clients_updated_at
   AFTER UPDATE ON clients

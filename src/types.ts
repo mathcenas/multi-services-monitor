@@ -83,6 +83,26 @@ export interface ITService {
   updated_at: string;
 }
 
+export interface NetworkConnection {
+  id: number;
+  server_id: string;
+  username?: string;
+  hostname?: string;
+  ip_address: string;
+  protocol: string;
+  share_name?: string;
+  connected_at?: string;
+  disconnected_at?: string;
+  last_seen: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ConnectionStats {
+  protocol: string;
+  count: number;
+}
+
 export interface DashboardServer extends Server {
   services: Service[];
   client?: Client;

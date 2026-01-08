@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { DashboardServer, Service } from '../types';
 import { getDashboard } from '../api';
-import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle, Info, Terminal, Cpu, MemoryStick } from 'lucide-react';
+import { Server, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, HardDrive, Archive, AlertCircle, Info, Terminal, Cpu, MemoryStick, Users } from 'lucide-react';
 import { getRelativeTime, groupServicesByType, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel, isAgentOutdated, getLatestAgentVersion, getAgentDisplayName } from '../utils';
+import { ConnectionInventory } from './ConnectionInventory';
 
 type FilterMode = 'all' | 'issues' | 'critical-disks';
 
@@ -16,6 +17,7 @@ export function Dashboard() {
   const [groupByType, setGroupByType] = useState(false);
   const [showStatusHelp, setShowStatusHelp] = useState(false);
   const [sortCriticalFirst, setSortCriticalFirst] = useState(true);
+  const [viewingConnectionsFor, setViewingConnectionsFor] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadDashboard();
@@ -364,6 +366,23 @@ export function Dashboard() {
 
   if (loading) {
     return <div className="text-center py-8">Loading dashboard...</div>;
+  }
+
+  if (viewingConnectionsFor) {
+    return (
+      <div>
+        <button
+          onClick={() => setViewingConnectionsFor(null)}
+          className="mb-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          ← Back to Dashboard
+        </button>
+        <ConnectionInventory
+          serverId={viewingConnectionsFor.id}
+          serverName={viewingConnectionsFor.name}
+        />
+      </div>
+    );
   }
 
   return (
@@ -739,6 +758,17 @@ export function Dashboard() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${badgeColor}`}>
                       {summary.total} service{summary.total !== 1 ? 's' : ''}
                     </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingConnectionsFor({ id: server.id, name: server.name });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors"
+                      title="View Network Connections"
+                    >
+                      <Users size={14} />
+                      Connections
+                    </button>
                   </div>
                 </div>
               </div>

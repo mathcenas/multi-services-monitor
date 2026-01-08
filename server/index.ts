@@ -67,6 +67,17 @@ app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
   }
 });
 
+app.get('/monitor-agent-omv-connections.sh', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-omv-connections.sh');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-omv-connections.sh"');
+    res.sendFile(scriptPath);
+  } catch (error) {
+    res.status(404).json({ error: 'OMV connection monitor agent script not found' });
+  }
+});
+
 app.get('/api/agent-version', (req, res) => {
   const versions = {
     'monitor-agent.sh': '1.2.0',
@@ -897,6 +908,113 @@ app.post('/api/import', (req, res) => {
   } catch (error) {
     console.error('Failed to import data:', error);
     res.status(500).json({ error: 'Failed to import data' });
+  }
+});
+
+app.post('/api/connections/report', (req, res) => {
+  try {
+    const { server_name, hostname, connections } = req.body;
+
+    const server = db.prepare('SELECT id FROM servers WHERE name = ? OR hostname = ?').get(server_name, hostname);
+
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    const serverId = (server as any).id;
+    const now = new Date().toISOString();
+
+    db.prepare('UPDATE network_connections SET is_active = 0, disconnected_at = ? WHERE server_id = ? AND is_active = 1')
+      .run(now, serverId);
+
+    const insertConnection = db.prepare(`
+      INSERT INTO network_connections (
+        server_id, username, hostname, ip_address, protocol, share_name,
+        connected_at, last_seen, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `);
+
+    const updateConnection = db.prepare(`
+      UPDATE network_connections
+      SET last_seen = ?, is_active = 1, disconnected_at = NULL
+      WHERE server_id = ? AND ip_address = ? AND protocol = ? AND (username IS ? OR username = ?)
+    `);
+
+    let added = 0;
+    let updated = 0;
+
+    for (const conn of connections) {
+      const existing = db.prepare(`
+        SELECT id FROM network_connections
+        WHERE server_id = ? AND ip_address = ? AND protocol = ?
+        AND (username IS ? OR username = ?)
+        AND disconnected_at IS NULL
+        ORDER BY last_seen DESC LIMIT 1
+      `).get(serverId, conn.ip_address, conn.protocol, conn.username || null, conn.username || null);
+
+      if (existing) {
+        updateConnection.run(now, serverId, conn.ip_address, conn.protocol, conn.username || null, conn.username || null);
+        updated++;
+      } else {
+        insertConnection.run(
+          serverId,
+          conn.username || null,
+          conn.hostname || null,
+          conn.ip_address,
+          conn.protocol,
+          conn.share_name || null,
+          conn.connected_at || now,
+          now
+        );
+        added++;
+      }
+    }
+
+    res.json({
+      success: true,
+      server_id: serverId,
+      added,
+      updated,
+      total: connections.length
+    });
+  } catch (error) {
+    console.error('Failed to report connections:', error);
+    res.status(500).json({ error: 'Failed to report connections' });
+  }
+});
+
+app.get('/api/servers/:serverId/connections', (req, res) => {
+  try {
+    const activeConnections = db.prepare(`
+      SELECT * FROM network_connections
+      WHERE server_id = ? AND is_active = 1
+      ORDER BY last_seen DESC
+    `).all(req.params.serverId);
+
+    const recentConnections = db.prepare(`
+      SELECT * FROM network_connections
+      WHERE server_id = ? AND is_active = 0
+      ORDER BY disconnected_at DESC
+      LIMIT 50
+    `).all(req.params.serverId);
+
+    const stats = db.prepare(`
+      SELECT
+        protocol,
+        COUNT(*) as count
+      FROM network_connections
+      WHERE server_id = ? AND is_active = 1
+      GROUP BY protocol
+    `).all(req.params.serverId);
+
+    res.json({
+      active: activeConnections,
+      recent: recentConnections,
+      stats: stats
+    });
+  } catch (error) {
+    console.error('Failed to fetch connections:', error);
+    res.status(500).json({ error: 'Failed to fetch connections' });
   }
 });
 
