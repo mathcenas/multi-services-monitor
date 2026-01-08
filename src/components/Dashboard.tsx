@@ -15,6 +15,7 @@ export function Dashboard() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [groupByType, setGroupByType] = useState(false);
   const [showStatusHelp, setShowStatusHelp] = useState(false);
+  const [sortCriticalFirst, setSortCriticalFirst] = useState(true);
 
   useEffect(() => {
     loadDashboard();
@@ -146,6 +147,24 @@ export function Dashboard() {
     }).filter(server => server.services.length > 0);
   };
 
+  const sortServers = (servers: DashboardServer[]): DashboardServer[] => {
+    if (!sortCriticalFirst) return servers;
+
+    return [...servers].sort((a, b) => {
+      const summaryA = getServerSummary(a);
+      const summaryB = getServerSummary(b);
+
+      const priorityA = summaryA.down > 0 || summaryA.diskCritical > 0 ? 0 : 1;
+      const priorityB = summaryB.down > 0 || summaryB.diskCritical > 0 ? 0 : 1;
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      return (summaryB.down + summaryB.diskCritical) - (summaryA.down + summaryA.diskCritical);
+    });
+  };
+
   const getNextCheckTime = (lastChecked: string | null, checkInterval: number): string => {
     if (!lastChecked) return 'Unknown';
     const lastCheckTime = new Date(lastChecked).getTime();
@@ -178,10 +197,10 @@ export function Dashboard() {
     const isExpanded = expandedServices.has(service.id);
 
     let cardClasses = '';
-    if (isBackup && backupColors) {
-      cardClasses = `${backupColors.bg} ${backupColors.border}`;
-    } else if (isDown || hasDiskCritical) {
+    if (isDown || hasDiskCritical) {
       cardClasses = 'border-red-200 bg-red-50';
+    } else if (isBackup && backupColors) {
+      cardClasses = `${backupColors.bg} ${backupColors.border}`;
     } else if (isActive) {
       cardClasses = 'border-green-200 bg-green-50';
     } else {
@@ -268,7 +287,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between pt-1">
               <div>
                 <span className="font-medium text-gray-600">Last:</span>{' '}
-                <span>{getRelativeTime(lastCheck)} ago</span>
+                <span>{getRelativeTime(lastCheck)}</span>
               </div>
               <div>
                 <span className="font-medium text-gray-600">Next:</span>{' '}
@@ -285,11 +304,15 @@ export function Dashboard() {
                   Disk: {service.disk_path}
                 </span>
                 <span className={`font-bold ${
+                  service.disk_usage === 100 ? 'text-red-900 animate-pulse' :
                   hasDiskCritical ? 'text-red-700' :
                   service.disk_usage >= 70 ? 'text-orange-700' :
                   'text-green-700'
                 }`}>
                   {service.disk_usage.toFixed(1)}%
+                  {service.disk_usage === 100 && (
+                    <span className="ml-1 text-xs font-black">FULL!</span>
+                  )}
                 </span>
               </div>
               {service.disk_used && service.disk_total && (
@@ -337,7 +360,7 @@ export function Dashboard() {
   };
 
   const stats = getOverallStats();
-  const filteredServers = filterServers(servers);
+  const filteredServers = sortServers(filterServers(servers));
 
   if (loading) {
     return <div className="text-center py-8">Loading dashboard...</div>;
@@ -398,6 +421,16 @@ export function Dashboard() {
             Group by Type
           </button>
           <button
+            onClick={() => setSortCriticalFirst(!sortCriticalFirst)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+              sortCriticalFirst
+                ? 'bg-red-50 text-red-600 border-red-200'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Critical First
+          </button>
+          <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -407,6 +440,29 @@ export function Dashboard() {
           </button>
         </div>
       </div>
+
+      {stats.diskCritical > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-lg animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <AlertTriangle size={24} className="text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-red-900">URGENT: Critical Disk Usage Detected</h3>
+              <p className="text-sm text-red-700 mt-1">
+                {stats.diskCritical} disk{stats.diskCritical !== 1 ? 's' : ''} at 90% or higher capacity.
+                Immediate action required to prevent system failures.
+              </p>
+            </div>
+            <button
+              onClick={() => setFilterMode('critical-disks')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              View Critical Disks
+            </button>
+          </div>
+        </div>
+      )}
 
       {showStatusHelp && (
         <div className="mb-6 p-5 bg-blue-50 border-2 border-blue-200 rounded-lg">

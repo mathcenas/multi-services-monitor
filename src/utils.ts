@@ -18,17 +18,26 @@ export function getRelativeTime(date: string | Date): string {
   }
 
   const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) {
+    return '1 day ago';
+  }
   if (diffInDays < 7) {
-    return `${diffInDays}d ago`;
+    return `${diffInDays} days ago`;
   }
 
   const diffInWeeks = Math.floor(diffInDays / 7);
+  if (diffInWeeks === 1) {
+    return '1 week ago';
+  }
   if (diffInWeeks < 4) {
-    return `${diffInWeeks}w ago`;
+    return `${diffInWeeks} weeks ago`;
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);
-  return `${diffInMonths}mo ago`;
+  if (diffInMonths === 1) {
+    return '1 month ago';
+  }
+  return `${diffInMonths} months ago`;
 }
 
 export function groupServicesByType<T extends { type?: string }>(services: T[]): Map<string, T[]> {
