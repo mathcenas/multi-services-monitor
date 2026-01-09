@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.1.0"
+AGENT_VERSION="1.2.0"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -45,57 +45,107 @@ get_smb_connections() {
     local connections="[]"
     local temp_file=$(mktemp)
 
+    # Try multiple log sources in order of preference
     if command -v journalctl &> /dev/null; then
-        journalctl -u smbd -n 500 --no-pager --since "5 minutes ago" 2>/dev/null | \
-            grep "smbd_audit\[" | \
-            grep -v "NT_STATUS_ACCESS_DENIED" | \
-            grep -v "guest user" | \
-            grep -v "gensec_spnego" | \
-            grep -E '\|(ok|OK)\|' > "$temp_file"
-    elif [ -f /var/log/syslog ]; then
-        tail -n 500 /var/log/syslog 2>/dev/null | \
-            grep "smbd_audit\[" | \
-            grep -v "NT_STATUS_ACCESS_DENIED" | \
-            grep -v "guest user" | \
-            grep -v "gensec_spnego" | \
-            grep -E '\|(ok|OK)\|' > "$temp_file"
+        # Try journalctl with smbd service
+        journalctl -u smbd -n 1000 --no-pager --since "5 minutes ago" 2>/dev/null | \
+            grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" > "$temp_file"
+    fi
+
+    # If no results, try syslog
+    if [ ! -s "$temp_file" ] && [ -f /var/log/syslog ]; then
+        tail -n 1000 /var/log/syslog 2>/dev/null | \
+            grep -E "smbd.*audit" | \
+            grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" > "$temp_file"
+    fi
+
+    # Try Samba-specific audit log locations
+    if [ ! -s "$temp_file" ]; then
+        for log_path in /var/log/samba/audit.log /var/log/samba-audit.log /var/log/samba/log.smbd; do
+            if [ -f "$log_path" ]; then
+                tail -n 1000 "$log_path" 2>/dev/null | \
+                    grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | \
+                    grep -v "NT_STATUS_ACCESS_DENIED" >> "$temp_file"
+            fi
+        done
     fi
 
     if [ -s "$temp_file" ]; then
-        connections=$(awk -F'|' '
+        connections=$(awk '
         {
-            for (i = 1; i <= NF; i++) {
-                if ($i ~ /smbd_audit\[/) {
-                    split($i, parts, ":")
-                    line = parts[2]
-                    for (j = 3; j <= length(parts); j++) {
-                        line = line ":" parts[j]
-                    }
+            # Try to extract user, IP, share from various log formats
+            # Format 1: Standard audit format with pipe delimiters
+            # Format 2: OMV format with structured fields
 
-                    split(line, fields, "|")
-                    if (length(fields) >= 5) {
-                        username = fields[1]
+            username = ""
+            ip = ""
+            share = ""
+            hostname_val = ""
+
+            # Look for pipe-delimited format: user|ip|hostname|status|share|operation
+            if ($0 ~ /\|/) {
+                split($0, parts, "|")
+                for (i = 1; i <= length(parts); i++) {
+                    if (parts[i] ~ /[a-zA-Z0-9_.-]+@/) {
+                        # Skip email-like formats
+                        continue
+                    }
+                    # Try to identify username (first text field)
+                    if (username == "" && parts[i] ~ /^[a-zA-Z][a-zA-Z0-9_.-]*$/) {
+                        username = parts[i]
                         gsub(/^[ \t]+|[ \t]+$/, "", username)
-
-                        ip = fields[2]
-                        gsub(/^[ \t]+|[ \t]+$/, "", ip)
-
-                        hostname = fields[3]
-                        gsub(/^[ \t]+|[ \t]+$/, "", hostname)
-
-                        share = fields[5]
-                        gsub(/^[ \t]+|[ \t]+$/, "", share)
-
-                        if (username != "" && ip != "" && share != "") {
-                            key = username "|" ip
-                            users[key] = username
-                            ips[key] = ip
-                            hostnames[key] = hostname
-                            shares[key] = share
-                        }
                     }
-                    break
+                    # Try to identify IP address
+                    if (ip == "" && parts[i] ~ /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/) {
+                        ip = parts[i]
+                        gsub(/^[ \t]+|[ \t]+$/, "", ip)
+                    }
+                    # Share name often comes after OK status
+                    if (parts[i] ~ /(ok|OK)/ && i+1 <= length(parts)) {
+                        share = parts[i+1]
+                        gsub(/^[ \t]+|[ \t]+$/, "", share)
+                    }
                 }
+            }
+
+            # Alternative: Look for key patterns in the log line
+            if (username == "") {
+                # Extract username from audit log
+                if (match($0, /[^|]*smbd_audit[^:]*:[[:space:]]*([a-zA-Z][a-zA-Z0-9_.-]+)\|/, arr)) {
+                    username = arr[1]
+                } else if (match($0, /user=([a-zA-Z][a-zA-Z0-9_.-]+)/, arr)) {
+                    username = arr[1]
+                }
+            }
+
+            if (ip == "") {
+                # Extract IP address
+                if (match($0, /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/, arr)) {
+                    ip = arr[1]
+                    # Exclude localhost
+                    if (ip == "127.0.0.1" || ip ~ /^127\./) {
+                        ip = ""
+                    }
+                }
+            }
+
+            if (share == "") {
+                # Extract share name - look for common patterns
+                if (match($0, /share=([^|[:space:]]+)/, arr)) {
+                    share = arr[1]
+                } else if (match($0, /\|[^|]*\|([A-Z0-9_-]+)\|/, arr)) {
+                    share = arr[1]
+                }
+            }
+
+            # Store unique connections
+            if (username != "" && ip != "" && share != "") {
+                key = username "|" ip "|" share
+                users[key] = username
+                ips[key] = ip
+                shares[key] = share
             }
         }
         END {
@@ -104,8 +154,12 @@ get_smb_connections() {
             for (key in users) {
                 if (!first) printf ","
                 first = 0
+                # Escape quotes in values
+                gsub(/"/, "\\\"", users[key])
+                gsub(/"/, "\\\"", ips[key])
+                gsub(/"/, "\\\"", shares[key])
                 printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"SMB\",\"share_name\":\"%s\"}", \
-                    users[key], ips[key], hostnames[key], shares[key]
+                    users[key], ips[key], ips[key], shares[key]
             }
             printf "]"
         }
@@ -206,7 +260,7 @@ perform_update() {
 }
 
 main() {
-    log "OpenMediaVault SMB Connection Monitor Agent v1.1.0"
+    log "OpenMediaVault SMB Connection Monitor Agent v${AGENT_VERSION}"
     log "Monitoring SMB/Windows connections via audit logs for server: $SERVER_NAME"
     log "Reporting to: $API_URL"
     log "Check interval: ${CHECK_INTERVAL}s"
@@ -258,46 +312,70 @@ main() {
 if [ "$1" = "test" ]; then
     log "Running in test mode - collecting connections once..."
     echo ""
-    echo "Testing SMB audit log parsing..."
-    echo "---"
+    echo "=== Testing SMB Audit Log Parsing ==="
+    echo ""
+
+    echo "Checking available log sources..."
     if command -v journalctl &> /dev/null; then
-        echo "Recent smbd_audit entries (last 10 successful operations):"
-        journalctl -u smbd -n 100 --no-pager --since "5 minutes ago" 2>/dev/null | \
-            grep "smbd_audit\[" | \
+        echo "✓ journalctl available"
+        log_count=$(journalctl -u smbd -n 100 --no-pager --since "10 minutes ago" 2>/dev/null | grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | wc -l)
+        echo "  Found $log_count SMB audit entries in journalctl (last 10 minutes)"
+    fi
+
+    if [ -f /var/log/syslog ]; then
+        echo "✓ /var/log/syslog available"
+        log_count=$(tail -n 500 /var/log/syslog 2>/dev/null | grep -E "smbd.*audit" | grep -E "(pwrite|pread|connect)" | wc -l)
+        echo "  Found $log_count SMB audit entries in syslog"
+    fi
+
+    for log_path in /var/log/samba/audit.log /var/log/samba-audit.log /var/log/samba/log.smbd; do
+        if [ -f "$log_path" ]; then
+            echo "✓ $log_path available"
+            log_count=$(tail -n 100 "$log_path" 2>/dev/null | grep -E "(pwrite|pread|connect)" | wc -l)
+            echo "  Found $log_count SMB audit entries"
+        fi
+    done
+
+    echo ""
+    echo "=== Recent SMB Operations (last 10) ==="
+    echo "---"
+
+    if command -v journalctl &> /dev/null; then
+        journalctl -u smbd -n 200 --no-pager --since "10 minutes ago" 2>/dev/null | \
+            grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | \
             grep -v "NT_STATUS_ACCESS_DENIED" | \
-            grep -v "guest user" | \
-            grep -v "gensec_spnego" | \
-            grep -E '\|(ok|OK)\|' | \
             tail -10
-    else
-        echo "Recent smbd_audit entries from syslog (last 10 successful operations):"
-        tail -n 200 /var/log/syslog 2>/dev/null | \
-            grep "smbd_audit\[" | \
+    elif [ -f /var/log/syslog ]; then
+        tail -n 500 /var/log/syslog 2>/dev/null | \
+            grep -E "smbd.*audit" | \
+            grep -E "(pwrite|pread|connect|mkdir|rmdir|unlink|rename)" | \
             grep -v "NT_STATUS_ACCESS_DENIED" | \
-            grep -v "guest user" | \
-            grep -v "gensec_spnego" | \
-            grep -E '\|(ok|OK)\|' | \
             tail -10
     fi
+
     echo "---"
     echo ""
 
+    echo "=== Parsed Connection Data ==="
     connections=$(collect_all_connections)
-    echo "Formatted connections JSON:"
-    echo "$connections" | jq '.'
+    echo "$connections" | jq '.' 2>/dev/null || echo "$connections"
     echo ""
 
     if echo "$connections" | jq empty 2>/dev/null; then
-        echo "JSON validation: OK"
+        connection_count=$(echo "$connections" | jq 'length')
+        echo "✓ JSON validation: OK"
+        echo "✓ Found $connection_count unique connection(s)"
     else
-        echo "JSON validation: FAILED"
+        echo "✗ JSON validation: FAILED"
     fi
     echo ""
 
-    echo "Would send to API: $API_URL/connections/report"
+    echo "=== API Configuration ==="
+    echo "API URL: $API_URL/connections/report"
     echo "Server ID: $SERVER_ID"
     echo "Server Name: $SERVER_NAME"
     echo "Hostname: $HOSTNAME"
+    echo "Check Interval: ${CHECK_INTERVAL}s"
     exit 0
 fi
 

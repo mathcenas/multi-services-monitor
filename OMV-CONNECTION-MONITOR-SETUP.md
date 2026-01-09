@@ -76,7 +76,28 @@ CHECK_INTERVAL="300"
 
 **Note:** The SERVER_ID must match the UUID shown in your dashboard, not just a number.
 
-### 5. Test the Script
+### 5. Enable SMB Audit Logging in OpenMediaVault
+
+**CRITICAL:** The script requires Samba audit logging to be enabled. If you see "Auditar SMB/CIFS" in your OMV interface (under Services > SMB/CIFS > Logs tab), it means audit logging is available.
+
+To verify audit logging is working:
+
+1. In OMV web interface, go to **Services > SMB/CIFS > Logs**
+2. Select **"Auditar SMB/CIFS"** from the dropdown
+3. You should see connection logs with operations like `pwrite`, `unlink`, `pread`
+4. If you see logs there, the script will be able to parse them
+
+If audit logs are not showing:
+
+```bash
+# Check if the audit VFS module is configured
+sudo grep "vfs objects.*audit" /etc/samba/smb.conf
+
+# If not configured, you may need to add it to your share configuration
+# This is typically done through OMV's web interface under Shared Folders settings
+```
+
+### 6. Test the Script
 
 Run a test to verify the script can collect connection information:
 
@@ -84,9 +105,47 @@ Run a test to verify the script can collect connection information:
 sudo /usr/local/bin/monitor-agent-omv-connections.sh test
 ```
 
-You should see JSON output with current connections (if any are active).
+The test output will show:
+- Which log sources are available
+- How many audit entries were found
+- Recent SMB operations
+- Parsed connection data in JSON format
 
-### 6. Create systemd Service
+Example output:
+```
+=== Testing SMB Audit Log Parsing ===
+
+Checking available log sources...
+✓ journalctl available
+  Found 47 SMB audit entries in journalctl (last 10 minutes)
+
+=== Recent SMB Operations (last 10) ===
+---
+Jan 09 12:14:20 nas smbd_audit: daniela.leon|192.168.3.133|DESKTOP-ABC|ok|NAS-RBUY|pwrite|...
+Jan 09 12:11:15 nas smbd_audit: daniela.leon|192.168.3.133|DESKTOP-ABC|ok|NAS-RBUY|unlink|...
+---
+
+=== Parsed Connection Data ===
+[
+  {
+    "username": "daniela.leon",
+    "ip_address": "192.168.3.133",
+    "hostname": "192.168.3.133",
+    "protocol": "SMB",
+    "share_name": "NAS-RBUY"
+  }
+]
+
+✓ JSON validation: OK
+✓ Found 1 unique connection(s)
+```
+
+If you see `Found 0 unique connection(s)`, verify:
+- Audit logging is enabled (see step 5)
+- Users are actively accessing SMB shares
+- The log format matches what the script expects
+
+### 7. Create systemd Service
 
 Create a systemd service file:
 
@@ -113,7 +172,7 @@ User=root
 WantedBy=multi-user.target
 ```
 
-### 7. Enable and Start the Service
+### 8. Enable and Start the Service
 
 ```bash
 sudo systemctl daemon-reload
@@ -121,7 +180,7 @@ sudo systemctl enable monitor-agent-omv-connections
 sudo systemctl start monitor-agent-omv-connections
 ```
 
-### 8. Verify the Service is Running
+### 9. Verify the Service is Running
 
 Check the service status:
 
@@ -135,29 +194,32 @@ View recent logs:
 sudo journalctl -u monitor-agent-omv-connections -f
 ```
 
+You should see logs like:
+```
+[2026-01-09 12:15:30] OpenMediaVault SMB Connection Monitor Agent v1.2.0
+[2026-01-09 12:15:30] Collecting connection information...
+[2026-01-09 12:15:30] Found 1 active connection(s)
+[2026-01-09 12:15:30] Reporting connections to API...
+[2026-01-09 12:15:30] Successfully reported connections
+```
+
 ## What Gets Monitored
 
-The agent tracks the following types of connections:
+The agent specifically tracks SMB/CIFS connections by parsing Samba audit logs.
 
 ### SMB/CIFS Connections
 - Windows file sharing connections
 - Shows username, IP address, and shared folder
-- Tracked via `smbstatus` command
+- Tracked via Samba audit logs (smbd_audit module)
+- Monitors file operations: pwrite, pread, connect, mkdir, rmdir, unlink, rename
+- **Important:** Requires Samba audit VFS module to be enabled in OMV
 
-### NFS Connections
-- Linux/Unix NFS mounts
-- Shows client IP addresses and mounted exports
-- Tracked via `/proc/fs/nfsd` or `showmount`
-
-### SSH Connections
-- Remote terminal sessions
-- Shows username and source IP address
-- Tracked via `who` command
-
-### FTP Connections (if FTP server is running)
-- File transfer connections
-- Shows username and IP address
-- Tracked via `ftpwho` command
+The script looks for logs in multiple locations:
+1. `journalctl -u smbd` (systemd journal)
+2. `/var/log/syslog`
+3. `/var/log/samba/audit.log`
+4. `/var/log/samba-audit.log`
+5. `/var/log/samba/log.smbd`
 
 ## Viewing Connection Data
 
@@ -174,23 +236,61 @@ The connection inventory shows:
 
 ## Troubleshooting
 
-### Script not collecting SMB connections
+### Script not finding any connections (Found 0 unique connections)
+
+This is the most common issue. Follow these steps:
+
+1. **Verify audit logging is enabled:**
+   ```bash
+   sudo /usr/local/bin/monitor-agent-omv-connections.sh test
+   ```
+
+   Check the "Checking available log sources" section. It should show a count > 0.
+
+2. **Check OMV web interface:**
+   - Go to Services > SMB/CIFS > Logs
+   - Select "Auditar SMB/CIFS"
+   - You should see audit logs with operations like `pwrite`, `unlink`, etc.
+   - If empty, audit logging may not be enabled
+
+3. **Verify Samba audit VFS module:**
+   ```bash
+   sudo grep "vfs objects" /etc/samba/smb.conf
+   ```
+
+   Should include `audit` in the list. Example:
+   ```
+   vfs objects = audit
+   ```
+
+4. **Check if users are actually connected:**
+   - Make sure someone is actively using SMB shares
+   - Try copying a file to/from the NAS via Windows Explorer
+   - Run the test command again
+
+5. **Check journal logs directly:**
+   ```bash
+   sudo journalctl -u smbd -n 100 --since "5 minutes ago" | grep -E "(pwrite|pread|connect)"
+   ```
+
+   If this shows nothing, the audit logs aren't being generated.
+
+### SMB service not running
 
 Make sure Samba is installed and running:
 ```bash
 sudo systemctl status smbd
 ```
 
-### No NFS connections showing
-
-Verify NFS server is running:
+If not running:
 ```bash
-sudo systemctl status nfs-kernel-server
+sudo systemctl start smbd
+sudo systemctl enable smbd
 ```
 
 ### Permission denied errors
 
-The script requires root permissions to access connection information. Make sure the service is running as root.
+The script requires root permissions to access connection information. Make sure the service is running as root (check the systemd service file).
 
 ### Cannot reach API server
 
@@ -201,9 +301,39 @@ curl -v http://YOUR_DASHBOARD_SERVER:3001/api/health
 
 Verify firewall rules allow outbound connections to your dashboard server.
 
+### Log format doesn't match
+
+If you see audit logs in OMV but the script isn't parsing them, run:
+```bash
+sudo journalctl -u smbd -n 20 --since "5 minutes ago" | grep smbd_audit
+```
+
+Send this output to support for analysis. The log format may need adjustment.
+
 ## Updating the Script
 
-To update to a newer version:
+### Automatic Updates (Recommended)
+
+The script includes automatic update functionality. By default, it checks for updates every 24 hours and updates itself automatically when a new version is available.
+
+To verify auto-update is enabled:
+```bash
+grep AUTO_UPDATE /etc/default/monitor-agent-omv-connections
+```
+
+Should show:
+```
+AUTO_UPDATE="true"
+```
+
+You can see update activity in the logs:
+```bash
+sudo journalctl -u monitor-agent-omv-connections | grep -i update
+```
+
+### Manual Update
+
+To manually update to a newer version:
 
 ```bash
 sudo systemctl stop monitor-agent-omv-connections
@@ -211,6 +341,19 @@ sudo curl -o /usr/local/bin/monitor-agent-omv-connections.sh \
   http://YOUR_DASHBOARD_SERVER:3001/monitor-agent-omv-connections.sh
 sudo chmod +x /usr/local/bin/monitor-agent-omv-connections.sh
 sudo systemctl start monitor-agent-omv-connections
+```
+
+### Disable Auto-Updates
+
+If you prefer to update manually:
+
+```bash
+sudo nano /etc/default/monitor-agent-omv-connections
+```
+
+Change:
+```bash
+AUTO_UPDATE="false"
 ```
 
 ## Uninstallation

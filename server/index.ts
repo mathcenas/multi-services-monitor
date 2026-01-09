@@ -124,7 +124,7 @@ app.get('/api/agent-version', (req, res) => {
     'monitor-agent.ps1': '1.1.0',
     'monitor-agent-mikrotik.sh': '1.1.0',
     'monitor-agent-rsnapshot.sh': '1.2.0',
-    'monitor-agent-omv-connections.sh': '1.0.0'
+    'monitor-agent-omv-connections.sh': '1.2.0'
   };
   res.json(versions);
 });
