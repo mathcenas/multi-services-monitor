@@ -1,11 +1,15 @@
 #!/bin/bash
 
-# Use same environment variables as monitor-agent.sh for consistency
+AGENT_VERSION="1.1.0"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
+BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
 SERVER_ID="${SERVER_ID:-1}"
 HOSTNAME=$(hostname)
 CHECK_INTERVAL="${CHECK_INTERVAL:-300}"
+AUTO_UPDATE="${AUTO_UPDATE:-true}"
+UPDATE_CHECK_INTERVAL="${UPDATE_CHECK_INTERVAL:-86400}"
+LAST_UPDATE_CHECK_FILE="/tmp/monitor-agent-omv-connections-last-update-check"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -117,6 +121,90 @@ collect_all_connections() {
     get_smb_connections
 }
 
+check_for_update() {
+    if [ "$AUTO_UPDATE" != "true" ]; then
+        return 0
+    fi
+
+    local current_time=$(date +%s)
+    local last_check=0
+
+    if [ -f "$LAST_UPDATE_CHECK_FILE" ]; then
+        last_check=$(cat "$LAST_UPDATE_CHECK_FILE" 2>/dev/null || echo "0")
+    fi
+
+    local time_since_check=$((current_time - last_check))
+
+    if [ $time_since_check -lt $UPDATE_CHECK_INTERVAL ]; then
+        return 0
+    fi
+
+    echo "$current_time" > "$LAST_UPDATE_CHECK_FILE"
+
+    log "Checking for agent updates..."
+    local version_info=$(curl -s "${API_URL}/agent-version" 2>/dev/null)
+
+    if [ -z "$version_info" ]; then
+        log "Failed to check for updates"
+        return 1
+    fi
+
+    local latest_version=$(echo "$version_info" | grep -o '"monitor-agent-omv-connections.sh":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$latest_version" ]; then
+        log "Failed to parse version information"
+        return 1
+    fi
+
+    if [ "$latest_version" != "$AGENT_VERSION" ]; then
+        log "New version available: $latest_version (current: $AGENT_VERSION)"
+        perform_update
+        return $?
+    else
+        log "Agent is up to date (version $AGENT_VERSION)"
+        return 0
+    fi
+}
+
+perform_update() {
+    log "Downloading new agent version..."
+
+    local script_path=$(readlink -f "$0")
+    local backup_path="${script_path}.backup"
+    local temp_path="${script_path}.new"
+
+    if ! curl -f -s -o "$temp_path" "${BASE_URL}/monitor-agent-omv-connections.sh"; then
+        log "Failed to download new version"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    if [ ! -s "$temp_path" ]; then
+        log "Downloaded file is empty"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    if ! bash -n "$temp_path" 2>/dev/null; then
+        log "Downloaded file has syntax errors"
+        rm -f "$temp_path"
+        return 1
+    fi
+
+    cp "$script_path" "$backup_path"
+
+    if mv "$temp_path" "$script_path"; then
+        chmod +x "$script_path"
+        log "Agent updated successfully. Restarting..."
+        exec "$script_path" "$@"
+    else
+        log "Failed to update agent"
+        mv "$backup_path" "$script_path" 2>/dev/null
+        rm -f "$temp_path"
+        return 1
+    fi
+}
+
 main() {
     log "OpenMediaVault SMB Connection Monitor Agent v1.1.0"
     log "Monitoring SMB/Windows connections via audit logs for server: $SERVER_NAME"
@@ -136,6 +224,8 @@ main() {
     if ! command -v journalctl &> /dev/null && [ ! -f /var/log/syslog ]; then
         log "WARNING: Neither journalctl nor /var/log/syslog found. Cannot monitor connections."
     fi
+
+    check_for_update
 
     while true; do
         log "Collecting connection information..."
@@ -160,6 +250,8 @@ main() {
 
         log "Sleeping for ${CHECK_INTERVAL}s..."
         sleep "$CHECK_INTERVAL"
+
+        check_for_update
     done
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NetworkConnection, ConnectionStats } from '../types';
 import { getRelativeTime } from '../utils';
-import { Users, Wifi, WifiOff, RefreshCw, Clock, Monitor, HardDrive, Globe } from 'lucide-react';
+import { Users, Wifi, WifiOff, RefreshCw, Clock, Monitor, HardDrive, Globe, FileDown } from 'lucide-react';
 
 interface ConnectionInventoryProps {
   serverId: string;
@@ -40,6 +40,10 @@ export function ConnectionInventory({ serverId, serverName }: ConnectionInventor
   const handleRefresh = () => {
     setRefreshing(true);
     loadConnections();
+  };
+
+  const handleExportPDF = () => {
+    window.open(`/api/connections/export-pdf?serverId=${serverId}`, '_blank');
   };
 
   const getProtocolIcon = (protocol: string) => {
@@ -85,14 +89,23 @@ export function ConnectionInventory({ serverId, serverName }: ConnectionInventor
           <h3 className="text-xl font-bold text-gray-900">Network Connections</h3>
           <p className="text-sm text-gray-600">{serverName}</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <FileDown size={18} />
+            Export PDF
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {stats.length > 0 && (
