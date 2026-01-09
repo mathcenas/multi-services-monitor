@@ -1067,8 +1067,8 @@ app.get('/api/servers/:serverId/connections', (req, res) => {
 app.get('/api/connections/export-pdf', (req, res) => {
   try {
     const serverId = req.query.serverId;
-    let activeConnections;
-    let serverInfo;
+    let activeConnections: any[];
+    let serverInfo: { name: string; hostname: string } | undefined;
 
     if (serverId) {
       activeConnections = db.prepare(`
@@ -1079,7 +1079,7 @@ app.get('/api/connections/export-pdf', (req, res) => {
 
       serverInfo = db.prepare(`
         SELECT name, hostname FROM servers WHERE id = ?
-      `).get(serverId);
+      `).get(serverId) as { name: string; hostname: string } | undefined;
     } else {
       activeConnections = db.prepare(`
         SELECT nc.*, s.name as server_name, s.hostname as server_hostname
