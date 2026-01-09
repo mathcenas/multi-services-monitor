@@ -26,18 +26,26 @@ const distPath = path.join(__dirname, '..');
 
 const getScriptPath = (filename: string): string => {
   const possiblePaths = [
+    path.join(process.cwd(), filename),
     path.join(__dirname, '..', '..', filename),
     path.join(__dirname, '..', filename),
-    path.join(process.cwd(), filename)
+    path.join(__dirname, '..', '..', '..', filename),
+    path.join('/tmp/cc-agent/61886792/project', filename)
   ];
 
+  console.log(`Looking for ${filename} in:`);
   for (const p of possiblePaths) {
+    console.log(`  Checking: ${p} - ${fs.existsSync(p) ? 'FOUND' : 'not found'}`);
     if (fs.existsSync(p)) {
+      console.log(`  Using: ${p}`);
       return p;
     }
   }
 
-  throw new Error(`Script not found: ${filename}`);
+  console.error(`Script not found: ${filename}`);
+  console.error(`__dirname: ${__dirname}`);
+  console.error(`process.cwd(): ${process.cwd()}`);
+  throw new Error(`Script not found: ${filename}. Tried: ${possiblePaths.join(', ')}`);
 };
 
 app.get('/monitor-agent.sh', (req, res) => {
@@ -49,7 +57,8 @@ app.get('/monitor-agent.sh', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent.sh:', error);
-    res.status(404).json({ error: 'Monitor agent script not found' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
 });
 
@@ -62,7 +71,8 @@ app.get('/monitor-agent.ps1', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent.ps1:', error);
-    res.status(404).json({ error: 'PowerShell monitor agent script not found' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
 });
 
@@ -75,7 +85,8 @@ app.get('/monitor-agent-mikrotik.sh', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent-mikrotik.sh:', error);
-    res.status(404).json({ error: 'MikroTik monitor agent script not found' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
 });
 
@@ -88,7 +99,8 @@ app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent-rsnapshot.sh:', error);
-    res.status(404).json({ error: 'Rsnapshot monitor agent script not found' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
 });
 
@@ -101,7 +113,8 @@ app.get('/monitor-agent-omv-connections.sh', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent-omv-connections.sh:', error);
-    res.status(404).json({ error: 'OMV connection monitor agent script not found' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
 });
 

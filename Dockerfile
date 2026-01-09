@@ -39,7 +39,8 @@ COPY monitor-agent.sh ./
 COPY monitor-agent.ps1 ./
 COPY monitor-agent-mikrotik.sh ./
 COPY monitor-agent-rsnapshot.sh ./
-RUN chmod +x monitor-agent.sh monitor-agent-mikrotik.sh monitor-agent-rsnapshot.sh
+COPY monitor-agent-omv-connections.sh ./
+RUN chmod +x monitor-agent.sh monitor-agent-mikrotik.sh monitor-agent-rsnapshot.sh monitor-agent-omv-connections.sh
 
 ENV NODE_ENV=production
 ENV PORT=3001
