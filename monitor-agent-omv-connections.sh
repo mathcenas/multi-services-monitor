@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.3.1"
+AGENT_VERSION="1.3.2"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -307,6 +307,39 @@ if [ "$1" = "test" ]; then
     echo "Server Name: $SERVER_NAME"
     echo "Hostname: $HOSTNAME"
     echo "Check Interval: ${CHECK_INTERVAL}s"
+    exit 0
+fi
+
+if [ "$1" = "debug" ]; then
+    log "Debug mode - showing exact API payload..."
+    echo ""
+
+    connections=$(get_smb_connections)
+
+    echo "=== Parsed Connections JSON ==="
+    echo "$connections" | jq '.' 2>/dev/null || echo "$connections"
+    echo ""
+
+    echo "=== Full API Payload ==="
+    payload=$(cat <<EOF
+{
+    "server_id": $SERVER_ID,
+    "server_name": "$SERVER_NAME",
+    "hostname": "$HOSTNAME",
+    "connections": $connections
+}
+EOF
+)
+    echo "$payload" | jq '.' 2>/dev/null || echo "$payload"
+    echo ""
+
+    echo "=== Testing API Call ==="
+    response=$(curl -v -X POST \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        "$API_URL/connections/report" 2>&1)
+
+    echo "$response"
     exit 0
 fi
 
