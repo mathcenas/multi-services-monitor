@@ -954,9 +954,14 @@ app.post('/api/import', (req, res) => {
 
 app.post('/api/connections/report', (req, res) => {
   try {
-    const { server_name, hostname, connections } = req.body;
+    const { server_id, server_name, hostname, connections } = req.body;
 
-    const server = db.prepare('SELECT id FROM servers WHERE name = ? OR hostname = ?').get(server_name, hostname);
+    let server;
+    if (server_id) {
+      server = db.prepare('SELECT id FROM servers WHERE id = ?').get(server_id);
+    } else {
+      server = db.prepare('SELECT id FROM servers WHERE name = ? OR hostname = ?').get(server_name, hostname);
+    }
 
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });

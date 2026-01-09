@@ -57,13 +57,14 @@ get_nfs_connections() {
             fi
         done | jq -s '.' 2>/dev/null || echo "[]")
     elif command -v showmount &> /dev/null; then
-        connections=$(showmount -a 2>/dev/null | tail -n +2 | awk '{
+        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        connections=$(showmount -a 2>/dev/null | tail -n +2 | awk -v ts="$timestamp" '{
             split($1, arr, ":");
             host = arr[1];
             share = arr[2];
             if (host != "") {
                 printf "{\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"NFS\",\"username\":null,\"share_name\":\"%s\",\"connected_at\":\"%s\"}\n",
-                    host, host, share, strftime("%Y-%m-%dT%H:%M:%SZ", systime())
+                    host, host, share, ts
             }
         }' | jq -s '.' 2>/dev/null || echo "[]")
     fi
@@ -75,7 +76,8 @@ get_ssh_connections() {
     local connections="[]"
 
     if command -v who &> /dev/null; then
-        connections=$(who -u | grep -v "^$" | awk '{
+        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        connections=$(who -u | grep -v "^$" | awk -v ts="$timestamp" '{
             user = $1;
             tty = $2;
             ip = "";
@@ -89,7 +91,7 @@ get_ssh_connections() {
             if (ip == "") ip = "local";
             if (ip != "local") {
                 printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":null,\"protocol\":\"SSH\",\"share_name\":null,\"connected_at\":\"%s\"}\n",
-                    user, ip, strftime("%Y-%m-%dT%H:%M:%SZ", systime())
+                    user, ip, ts
             }
         }' | jq -s '.' 2>/dev/null || echo "[]")
     fi
@@ -101,13 +103,14 @@ get_ftp_connections() {
     local connections="[]"
 
     if command -v ftpwho &> /dev/null; then
-        connections=$(ftpwho 2>/dev/null | grep -E "^[0-9]" | awk '{
+        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        connections=$(ftpwho 2>/dev/null | grep -E "^[0-9]" | awk -v ts="$timestamp" '{
             user = $7;
             ip = $9;
             gsub(/[()]/, "", ip);
             if (ip != "") {
                 printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":null,\"protocol\":\"FTP\",\"share_name\":null,\"connected_at\":\"%s\"}\n",
-                    user, ip, strftime("%Y-%m-%dT%H:%M:%SZ", systime())
+                    user, ip, ts
             }
         }' | jq -s '.' 2>/dev/null || echo "[]")
     fi
