@@ -41,17 +41,25 @@ get_smb_connections() {
     local connections="[]"
 
     if command -v smbstatus &> /dev/null; then
-        connections=$(smbstatus -j 2>/dev/null | jq -c '[
-            .sessions[] |
-            {
-                username: .username,
-                ip_address: .remote_machine,
-                hostname: .remote_machine,
-                protocol: "SMB",
-                share_name: (.tcons[0].service // ""),
-                connected_at: (.session_start // now | todate)
-            }
-        ]' 2>/dev/null || echo "[]")
+        local smb_output=$(smbstatus -j 2>/dev/null)
+
+        if [ -n "$smb_output" ] && echo "$smb_output" | jq empty 2>/dev/null; then
+            connections=$(echo "$smb_output" | jq -c '
+                if .sessions then
+                    [.sessions[] |
+                    {
+                        username: (.username // "unknown"),
+                        ip_address: (.remote_machine // "unknown"),
+                        hostname: (.remote_machine // "unknown"),
+                        protocol: "SMB",
+                        share_name: (if .tcons and (.tcons | length > 0) then .tcons[0].service else "" end),
+                        connected_at: (if .session_start then (.session_start | todate) else (now | todate) end)
+                    }]
+                else
+                    []
+                end
+            ' 2>/dev/null || echo "[]")
+        fi
     fi
 
     echo "$connections"
@@ -86,22 +94,21 @@ main() {
         log "Collecting connection information..."
 
         connections=$(collect_all_connections)
+
+        if ! echo "$connections" | jq empty 2>/dev/null; then
+            log "ERROR: Invalid JSON returned from connection collector"
+            connections="[]"
+        fi
+
         connection_count=$(echo "$connections" | jq 'length' 2>/dev/null || echo "0")
 
         log "Found $connection_count active connection(s)"
 
-        if [ "$connection_count" -gt 0 ]; then
-            log "Reporting connections to API..."
-            if response=$(report_connections "$SERVER_NAME" "$connections" 2>&1); then
-                log "Successfully reported connections"
-            else
-                log "ERROR: Failed to report connections - $response"
-            fi
+        log "Reporting connections to API..."
+        if response=$(report_connections "$SERVER_NAME" "$connections" 2>&1); then
+            log "Successfully reported connections"
         else
-            log "No active connections to report"
-            if ! report_connections "$SERVER_NAME" "[]" 2>&1 | grep -q "200"; then
-                log "WARNING: Failed to report empty connection list"
-            fi
+            log "ERROR: Failed to report connections - $response"
         fi
 
         log "Sleeping for ${CHECK_INTERVAL}s..."
@@ -111,8 +118,29 @@ main() {
 
 if [ "$1" = "test" ]; then
     log "Running in test mode - collecting connections once..."
+    echo ""
+    echo "Testing smbstatus output..."
+    echo "---"
+    smbstatus -j 2>&1 | head -20
+    echo "---"
+    echo ""
+
     connections=$(collect_all_connections)
+    echo "Formatted connections JSON:"
     echo "$connections" | jq '.'
+    echo ""
+
+    if echo "$connections" | jq empty 2>/dev/null; then
+        echo "JSON validation: OK"
+    else
+        echo "JSON validation: FAILED"
+    fi
+    echo ""
+
+    echo "Would send to API: $API_URL/connections/report"
+    echo "Server ID: $SERVER_ID"
+    echo "Server Name: $SERVER_NAME"
+    echo "Hostname: $HOSTNAME"
     exit 0
 fi
 
