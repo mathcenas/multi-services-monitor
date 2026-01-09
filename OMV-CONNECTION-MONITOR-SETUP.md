@@ -1,6 +1,6 @@
 # OpenMediaVault Connection Monitor Setup
 
-This guide will help you set up connection monitoring for your OpenMediaVault NAS, tracking active SMB/CIFS, NFS, SSH, and FTP connections in real-time.
+This guide will help you set up connection monitoring for your OpenMediaVault NAS, tracking active SMB/CIFS Windows connections in real-time.
 
 ## Quick Start
 

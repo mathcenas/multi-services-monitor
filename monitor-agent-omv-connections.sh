@@ -57,93 +57,14 @@ get_smb_connections() {
     echo "$connections"
 }
 
-get_nfs_connections() {
-    local connections="[]"
-
-    if [ -f /proc/fs/nfsd/clients/*/info ]; then
-        connections=$(for client in /proc/fs/nfsd/clients/*/info; do
-            if [ -f "$client" ]; then
-                ip=$(grep "^address:" "$client" | awk '{print $2}' | sed 's/:.*$//')
-                echo "{\"ip_address\":\"$ip\",\"protocol\":\"NFS\",\"username\":null,\"hostname\":null,\"share_name\":null,\"connected_at\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
-            fi
-        done | jq -s '.' 2>/dev/null || echo "[]")
-    elif command -v showmount &> /dev/null; then
-        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        connections=$(showmount -a 2>/dev/null | tail -n +2 | awk -v ts="$timestamp" '{
-            split($1, arr, ":");
-            host = arr[1];
-            share = arr[2];
-            if (host != "") {
-                printf "{\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"NFS\",\"username\":null,\"share_name\":\"%s\",\"connected_at\":\"%s\"}\n",
-                    host, host, share, ts
-            }
-        }' | jq -s '.' 2>/dev/null || echo "[]")
-    fi
-
-    echo "$connections"
-}
-
-get_ssh_connections() {
-    local connections="[]"
-
-    if command -v who &> /dev/null; then
-        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        connections=$(who -u | grep -v "^$" | awk -v ts="$timestamp" '{
-            user = $1;
-            tty = $2;
-            ip = "";
-            for (i = 6; i <= NF; i++) {
-                if ($i ~ /^\(/) {
-                    gsub(/[()]/, "", $i);
-                    ip = $i;
-                    break;
-                }
-            }
-            if (ip == "") ip = "local";
-            if (ip != "local") {
-                printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":null,\"protocol\":\"SSH\",\"share_name\":null,\"connected_at\":\"%s\"}\n",
-                    user, ip, ts
-            }
-        }' | jq -s '.' 2>/dev/null || echo "[]")
-    fi
-
-    echo "$connections"
-}
-
-get_ftp_connections() {
-    local connections="[]"
-
-    if command -v ftpwho &> /dev/null; then
-        local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        connections=$(ftpwho 2>/dev/null | grep -E "^[0-9]" | awk -v ts="$timestamp" '{
-            user = $7;
-            ip = $9;
-            gsub(/[()]/, "", ip);
-            if (ip != "") {
-                printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":null,\"protocol\":\"FTP\",\"share_name\":null,\"connected_at\":\"%s\"}\n",
-                    user, ip, ts
-            }
-        }' | jq -s '.' 2>/dev/null || echo "[]")
-    fi
-
-    echo "$connections"
-}
 
 collect_all_connections() {
-    local smb_conn=$(get_smb_connections)
-    local nfs_conn=$(get_nfs_connections)
-    local ssh_conn=$(get_ssh_connections)
-    local ftp_conn=$(get_ftp_connections)
-
-    local all_connections=$(echo "$smb_conn $nfs_conn $ssh_conn $ftp_conn" | \
-        jq -s 'add | unique_by(.ip_address + .protocol + (.username // ""))' 2>/dev/null || echo "[]")
-
-    echo "$all_connections"
+    get_smb_connections
 }
 
 main() {
-    log "OpenMediaVault Connection Monitor Agent v1.0.0"
-    log "Monitoring connections for server: $SERVER_NAME"
+    log "OpenMediaVault SMB Connection Monitor Agent v1.0.0"
+    log "Monitoring SMB/Windows connections for server: $SERVER_NAME"
     log "Reporting to: $API_URL"
     log "Check interval: ${CHECK_INTERVAL}s"
 
@@ -155,6 +76,10 @@ main() {
     if ! command -v curl &> /dev/null; then
         log "ERROR: curl is required but not installed. Please install: apt-get install curl"
         exit 1
+    fi
+
+    if ! command -v smbstatus &> /dev/null; then
+        log "WARNING: smbstatus not found. Make sure Samba is installed and running."
     fi
 
     while true; do
