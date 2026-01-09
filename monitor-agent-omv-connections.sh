@@ -1,8 +1,10 @@
 #!/bin/bash
 
-API_URL="${API_URL:-http://localhost:3000}"
-SERVER_NAME="${SERVER_NAME:-$(hostname)}"
-HOSTNAME="${HOSTNAME:-$(hostname)}"
+# Use same environment variables as monitor-agent.sh for consistency
+API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
+SERVER_NAME=$(hostname)
+SERVER_ID="${SERVER_ID:-1}"
+HOSTNAME=$(hostname)
 CHECK_INTERVAL="${CHECK_INTERVAL:-300}"
 
 log() {
@@ -16,11 +18,12 @@ report_connections() {
     curl -X POST \
         -H "Content-Type: application/json" \
         -d "{
+            \"server_id\": $SERVER_ID,
             \"server_name\": \"$server_name\",
             \"hostname\": \"$HOSTNAME\",
             \"connections\": $connections_json
         }" \
-        "$API_URL/api/connections/report" 2>/dev/null
+        "$API_URL/connections/report" 2>/dev/null
 }
 
 get_smb_connections() {
