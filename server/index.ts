@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import db from './db.js';
 import { getLatestVersion, getAllLatestVersions } from './version-checker.js';
 
@@ -23,57 +24,83 @@ app.use(express.json());
 
 const distPath = path.join(__dirname, '..');
 
+const getScriptPath = (filename: string): string => {
+  const possiblePaths = [
+    path.join(__dirname, '..', '..', filename),
+    path.join(__dirname, '..', filename),
+    path.join(process.cwd(), filename)
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  throw new Error(`Script not found: ${filename}`);
+};
+
 app.get('/monitor-agent.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.sh');
+    const scriptPath = getScriptPath('monitor-agent.sh');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.sh"');
-    res.sendFile(scriptPath);
+    res.send(content);
   } catch (error) {
+    console.error('Error serving monitor-agent.sh:', error);
     res.status(404).json({ error: 'Monitor agent script not found' });
   }
 });
 
 app.get('/monitor-agent.ps1', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent.ps1');
+    const scriptPath = getScriptPath('monitor-agent.ps1');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent.ps1"');
-    res.sendFile(scriptPath);
+    res.send(content);
   } catch (error) {
+    console.error('Error serving monitor-agent.ps1:', error);
     res.status(404).json({ error: 'PowerShell monitor agent script not found' });
   }
 });
 
 app.get('/monitor-agent-mikrotik.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-mikrotik.sh');
+    const scriptPath = getScriptPath('monitor-agent-mikrotik.sh');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-mikrotik.sh"');
-    res.sendFile(scriptPath);
+    res.send(content);
   } catch (error) {
+    console.error('Error serving monitor-agent-mikrotik.sh:', error);
     res.status(404).json({ error: 'MikroTik monitor agent script not found' });
   }
 });
 
 app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-rsnapshot.sh');
+    const scriptPath = getScriptPath('monitor-agent-rsnapshot.sh');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-rsnapshot.sh"');
-    res.sendFile(scriptPath);
+    res.send(content);
   } catch (error) {
+    console.error('Error serving monitor-agent-rsnapshot.sh:', error);
     res.status(404).json({ error: 'Rsnapshot monitor agent script not found' });
   }
 });
 
 app.get('/monitor-agent-omv-connections.sh', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, '..', '..', 'monitor-agent-omv-connections.sh');
+    const scriptPath = getScriptPath('monitor-agent-omv-connections.sh');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-omv-connections.sh"');
-    res.sendFile(scriptPath);
+    res.send(content);
   } catch (error) {
+    console.error('Error serving monitor-agent-omv-connections.sh:', error);
     res.status(404).json({ error: 'OMV connection monitor agent script not found' });
   }
 });
@@ -83,7 +110,8 @@ app.get('/api/agent-version', (req, res) => {
     'monitor-agent.sh': '1.2.0',
     'monitor-agent.ps1': '1.1.0',
     'monitor-agent-mikrotik.sh': '1.1.0',
-    'monitor-agent-rsnapshot.sh': '1.2.0'
+    'monitor-agent-rsnapshot.sh': '1.2.0',
+    'monitor-agent-omv-connections.sh': '1.0.0'
   };
   res.json(versions);
 });

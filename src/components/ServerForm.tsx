@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Server } from '../types';
-import { X, Server as ServerIcon } from 'lucide-react';
+import { X, Server as ServerIcon, Info, Users, Download } from 'lucide-react';
 
 interface ServerFormProps {
   server?: Server;
@@ -16,6 +16,7 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
     notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [showConnectionInfo, setShowConnectionInfo] = useState(false);
 
   useEffect(() => {
     if (server) {
@@ -43,9 +44,11 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
     }
   };
 
+  const apiUrl = window.location.origin;
+
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -118,6 +121,56 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
               rows={3}
               placeholder="Internal notes about this server..."
             />
+          </div>
+
+          <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+            <button
+              type="button"
+              onClick={() => setShowConnectionInfo(!showConnectionInfo)}
+              className="flex items-center gap-2 text-blue-700 font-medium hover:text-blue-800 w-full justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Users size={18} />
+                <span>Connection Monitoring (Optional)</span>
+              </div>
+              <Info size={16} />
+            </button>
+
+            {showConnectionInfo && (
+              <div className="mt-3 space-y-3 text-sm text-gray-700">
+                <p className="font-medium">Track active network connections on this server (SMB, NFS, SSH, FTP)</p>
+
+                <div className="bg-white border border-blue-200 rounded p-3 space-y-2">
+                  <p className="font-medium text-gray-900">For OpenMediaVault/Debian/Ubuntu:</p>
+                  <div className="bg-gray-900 text-gray-100 p-3 rounded font-mono text-xs overflow-x-auto">
+                    <div>sudo apt-get install -y jq curl</div>
+                    <div className="mt-1">sudo curl -o /usr/local/bin/monitor-agent-omv-connections.sh \</div>
+                    <div>  {apiUrl}/monitor-agent-omv-connections.sh</div>
+                    <div className="mt-1">sudo chmod +x /usr/local/bin/monitor-agent-omv-connections.sh</div>
+                  </div>
+
+                  <p className="text-xs text-gray-600 mt-2">
+                    After download, configure the agent with your server details and set it up as a systemd service.
+                    See the setup guide for complete instructions.
+                  </p>
+                </div>
+
+                <a
+                  href={`${apiUrl}/monitor-agent-omv-connections.sh`}
+                  download
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full justify-center"
+                >
+                  <Download size={16} />
+                  Download Connection Monitor Script
+                </a>
+
+                <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                  <p className="text-xs text-amber-800">
+                    <strong>Note:</strong> The server name in this form must match the hostname of your server for connection tracking to work correctly.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-gray-200">

@@ -8,6 +8,7 @@ A web-based service monitoring system for managing and monitoring services acros
 - **Server Management**: Add and manage multiple servers
 - **Service Configuration**: Define services to monitor with custom check commands
 - **Disk Space Monitoring**: Individual disk monitoring per service with customizable thresholds
+- **Network Connection Tracking**: Monitor active SMB/CIFS, NFS, SSH, and FTP connections on OpenMediaVault and other NAS systems
 - **JSON Configuration Export**: Export monitoring configuration as JSON
 - **Monitoring Dashboard**: Real-time view of service status across all servers
 - **REST API**: Update service status from monitoring agents
