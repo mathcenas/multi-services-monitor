@@ -971,13 +971,28 @@ app.post('/api/connections/report', (req, res) => {
     let server;
     if (server_id) {
       server = db.prepare('SELECT id FROM servers WHERE id = ?').get(server_id);
+
+      if (!server) {
+        console.log('Auto-registering server with ID:', server_id);
+        try {
+          db.prepare(`
+            INSERT INTO servers (id, name, hostname, type, status, created_at, updated_at)
+            VALUES (?, ?, ?, 'omv', 'active', datetime('now'), datetime('now'))
+          `).run(server_id, server_name || hostname || 'Unknown', hostname || server_name || 'Unknown');
+
+          server = { id: server_id };
+        } catch (error: any) {
+          console.error('Failed to auto-register server:', error);
+          return res.status(500).json({ error: 'Failed to register server' });
+        }
+      }
     } else {
       server = db.prepare('SELECT id FROM servers WHERE name = ? OR hostname = ?').get(server_name, hostname);
-    }
 
-    if (!server) {
-      console.error('Server not found:', { server_id, server_name, hostname });
-      return res.status(404).json({ error: 'Server not found' });
+      if (!server) {
+        console.error('Server not found:', { server_id, server_name, hostname });
+        return res.status(404).json({ error: 'Server not found. Please provide a server_id or register the server first.' });
+      }
     }
 
     const serverId = (server as any).id;
