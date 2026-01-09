@@ -18,7 +18,7 @@ report_connections() {
     response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -d "{
-            \"server_id\": $SERVER_ID,
+            \"server_id\": \"$SERVER_ID\",
             \"server_name\": \"$server_name\",
             \"hostname\": \"$HOSTNAME\",
             \"connections\": $connections_json
