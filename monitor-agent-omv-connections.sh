@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.3.0"
+AGENT_VERSION="1.3.1"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -117,11 +117,7 @@ get_smb_connections() {
         for (key in users) {
             if (!first) printf ","
             first = 0
-            # Escape quotes in values
-            gsub(/"/, "\\\"", users[key])
-            gsub(/"/, "\\\"", ips[key])
-            printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"SMB\"}", \
-                users[key], ips[key], ips[key]
+            printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"SMB\"}", users[key], ips[key], ips[key]
         }
         printf "]"
     }
