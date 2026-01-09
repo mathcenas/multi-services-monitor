@@ -22,7 +22,7 @@ report_connections() {
     response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -d "{
-            \"server_id\": \"$SERVER_ID\",
+            \"server_id\": $SERVER_ID,
             \"server_name\": \"$server_name\",
             \"hostname\": \"$HOSTNAME\",
             \"connections\": $connections_json
@@ -87,10 +87,14 @@ get_smb_connections() {
 
         # Extract IP from machine field (format: IP or IP (ipv4:IP:port))
         ip = machine
-        if (match(machine, /^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/, arr)) {
-            ip = arr[1]
-        } else if (match(machine, /ipv4:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/, arr)) {
-            ip = arr[1]
+        # Handle format like: 192.168.3.111 (ipv4:192.168.3.111:52509)
+        if (match(machine, /ipv4:/)) {
+            sub(/.*ipv4:/, "", ip)
+            sub(/:.*/, "", ip)
+        } else {
+            # Extract simple IP format
+            sub(/\(.*/, "", ip)
+            gsub(/[[:space:]]/, "", ip)
         }
 
         # Skip localhost connections
