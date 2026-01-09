@@ -15,7 +15,7 @@ report_connections() {
     local server_name="$1"
     local connections_json="$2"
 
-    curl -X POST \
+    response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -d "{
             \"server_id\": $SERVER_ID,
@@ -23,7 +23,18 @@ report_connections() {
             \"hostname\": \"$HOSTNAME\",
             \"connections\": $connections_json
         }" \
-        "$API_URL/connections/report" 2>/dev/null
+        "$API_URL/connections/report" 2>/dev/null)
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    if [ "$http_code" = "200" ]; then
+        echo "$body"
+        return 0
+    else
+        echo "HTTP $http_code: $body" >&2
+        return 1
+    fi
 }
 
 get_smb_connections() {
@@ -156,16 +167,16 @@ main() {
 
         if [ "$connection_count" -gt 0 ]; then
             log "Reporting connections to API..."
-            response=$(report_connections "$SERVER_NAME" "$connections")
-
-            if [ $? -eq 0 ]; then
+            if response=$(report_connections "$SERVER_NAME" "$connections" 2>&1); then
                 log "Successfully reported connections"
             else
-                log "ERROR: Failed to report connections to API"
+                log "ERROR: Failed to report connections - $response"
             fi
         else
             log "No active connections to report"
-            report_connections "$SERVER_NAME" "[]"
+            if ! report_connections "$SERVER_NAME" "[]" 2>&1 | grep -q "200"; then
+                log "WARNING: Failed to report empty connection list"
+            fi
         fi
 
         log "Sleeping for ${CHECK_INTERVAL}s..."

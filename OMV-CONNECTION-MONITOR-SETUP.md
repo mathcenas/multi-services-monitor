@@ -43,7 +43,18 @@ sudo chmod +x /usr/local/bin/monitor-agent-omv-connections.sh
 
 Replace `YOUR_DASHBOARD_SERVER` with your dashboard server's IP address or hostname.
 
-### 3. Configure Environment Variables
+### 3. Add Server to Dashboard First
+
+**IMPORTANT:** Before configuring the script, you must add your NAS server to the monitoring dashboard:
+
+1. Open your monitoring dashboard web interface
+2. Go to the "Servers" section
+3. Click "Add Server"
+4. Fill in the server details (name should match your NAS hostname)
+5. Save the server
+6. **Copy the Server ID** from the server details page (it's a long UUID like `a1b2c3d4-...`)
+
+### 4. Configure Environment Variables
 
 Create a configuration file:
 
@@ -54,17 +65,18 @@ sudo nano /etc/default/monitor-agent-omv-connections
 Add the following content:
 
 ```bash
-API_URL="http://YOUR_DASHBOARD_SERVER:3001"
-SERVER_NAME="YOUR_NAS_NAME"
-HOSTNAME="$(hostname)"
+MONITOR_API_URL="http://YOUR_DASHBOARD_SERVER:3001"
+SERVER_ID="YOUR_SERVER_UUID_FROM_DASHBOARD"
 CHECK_INTERVAL="300"
 ```
 
-- `API_URL`: URL of your monitoring dashboard (include port if needed)
-- `SERVER_NAME`: Name of your server as configured in the dashboard
+- `MONITOR_API_URL`: URL of your monitoring dashboard (include port if needed)
+- `SERVER_ID`: **Required** - The UUID from the dashboard (from step 3 above)
 - `CHECK_INTERVAL`: How often to check connections (in seconds, default: 300 = 5 minutes)
 
-### 4. Test the Script
+**Note:** The SERVER_ID must match the UUID shown in your dashboard, not just a number.
+
+### 5. Test the Script
 
 Run a test to verify the script can collect connection information:
 
@@ -74,7 +86,7 @@ sudo /usr/local/bin/monitor-agent-omv-connections.sh test
 
 You should see JSON output with current connections (if any are active).
 
-### 5. Create systemd Service
+### 6. Create systemd Service
 
 Create a systemd service file:
 
@@ -101,7 +113,7 @@ User=root
 WantedBy=multi-user.target
 ```
 
-### 6. Enable and Start the Service
+### 7. Enable and Start the Service
 
 ```bash
 sudo systemctl daemon-reload
@@ -109,7 +121,7 @@ sudo systemctl enable monitor-agent-omv-connections
 sudo systemctl start monitor-agent-omv-connections
 ```
 
-### 7. Verify the Service is Running
+### 8. Verify the Service is Running
 
 Check the service status:
 
