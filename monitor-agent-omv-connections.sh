@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.3.2"
+AGENT_VERSION="1.3.3"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -22,7 +22,7 @@ report_connections() {
     response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -d "{
-            \"server_id\": $SERVER_ID,
+            \"server_id\": \"$SERVER_ID\",
             \"server_name\": \"$server_name\",
             \"hostname\": \"$HOSTNAME\",
             \"connections\": $connections_json
@@ -73,8 +73,18 @@ get_smb_connections() {
 
     # Parse connection lines in the connections section
     in_connections_section && NF >= 5 {
-        # Skip header line
-        if ($1 == "PID" || $2 == "Username") {
+        # Skip header lines more aggressively
+        if ($1 == "PID" || $1 == "pid" || $2 == "Username" || $1 == "Uid" || $2 == "Access" || $2 == "Connected") {
+            next
+        }
+
+        # Skip lines that contain day names (header row artifacts)
+        if ($2 == "Mon" || $2 == "Tue" || $2 == "Wed" || $2 == "Thu" || $2 == "Fri" || $2 == "Sat" || $2 == "Sun") {
+            next
+        }
+
+        # PID must be numeric
+        if ($1 !~ /^[0-9]+$/) {
             next
         }
 
@@ -95,6 +105,11 @@ get_smb_connections() {
             # Extract simple IP format
             sub(/\(.*/, "", ip)
             gsub(/[[:space:]]/, "", ip)
+        }
+
+        # IP address must look like an IP (contains dots and numbers)
+        if (ip !~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) {
+            next
         }
 
         # Skip localhost connections
@@ -323,7 +338,7 @@ if [ "$1" = "debug" ]; then
     echo "=== Full API Payload ==="
     payload=$(cat <<EOF
 {
-    "server_id": $SERVER_ID,
+    "server_id": "$SERVER_ID",
     "server_name": "$SERVER_NAME",
     "hostname": "$HOSTNAME",
     "connections": $connections

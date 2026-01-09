@@ -124,7 +124,7 @@ app.get('/api/agent-version', (req, res) => {
     'monitor-agent.ps1': '1.1.0',
     'monitor-agent-mikrotik.sh': '1.1.0',
     'monitor-agent-rsnapshot.sh': '1.2.0',
-    'monitor-agent-omv-connections.sh': '1.3.2'
+    'monitor-agent-omv-connections.sh': '1.3.3'
   };
   res.json(versions);
 });
@@ -954,7 +954,19 @@ app.post('/api/import', (req, res) => {
 
 app.post('/api/connections/report', (req, res) => {
   try {
+    console.log('Received connections report:', {
+      server_id: req.body.server_id,
+      server_name: req.body.server_name,
+      hostname: req.body.hostname,
+      connection_count: req.body.connections?.length
+    });
+
     const { server_id, server_name, hostname, connections } = req.body;
+
+    if (!connections || !Array.isArray(connections)) {
+      console.error('Invalid connections format:', connections);
+      return res.status(400).json({ error: 'connections must be an array' });
+    }
 
     let server;
     if (server_id) {
@@ -964,6 +976,7 @@ app.post('/api/connections/report', (req, res) => {
     }
 
     if (!server) {
+      console.error('Server not found:', { server_id, server_name, hostname });
       return res.status(404).json({ error: 'Server not found' });
     }
 
