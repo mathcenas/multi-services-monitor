@@ -39,29 +39,76 @@ report_connections() {
 
 get_smb_connections() {
     local connections="[]"
+    local temp_file=$(mktemp)
 
-    if command -v smbstatus &> /dev/null; then
-        local smb_output=$(smbstatus -j 2>/dev/null)
-
-        if [ -n "$smb_output" ] && echo "$smb_output" | jq empty 2>/dev/null; then
-            connections=$(echo "$smb_output" | jq -c '
-                if .sessions then
-                    [.sessions[] |
-                    {
-                        username: (.username // "unknown"),
-                        ip_address: (.remote_machine // "unknown"),
-                        hostname: (.remote_machine // "unknown"),
-                        protocol: "SMB",
-                        share_name: (if .tcons and (.tcons | length > 0) then .tcons[0].service else "" end),
-                        connected_at: (if .session_start then (.session_start | todate) else (now | todate) end)
-                    }]
-                else
-                    []
-                end
-            ' 2>/dev/null || echo "[]")
-        fi
+    if command -v journalctl &> /dev/null; then
+        journalctl -u smbd -n 500 --no-pager --since "5 minutes ago" 2>/dev/null | \
+            grep "smbd_audit\[" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" | \
+            grep -v "guest user" | \
+            grep -v "gensec_spnego" | \
+            grep -E '\|(ok|OK)\|' > "$temp_file"
+    elif [ -f /var/log/syslog ]; then
+        tail -n 500 /var/log/syslog 2>/dev/null | \
+            grep "smbd_audit\[" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" | \
+            grep -v "guest user" | \
+            grep -v "gensec_spnego" | \
+            grep -E '\|(ok|OK)\|' > "$temp_file"
     fi
 
+    if [ -s "$temp_file" ]; then
+        connections=$(awk -F'|' '
+        {
+            for (i = 1; i <= NF; i++) {
+                if ($i ~ /smbd_audit\[/) {
+                    split($i, parts, ":")
+                    line = parts[2]
+                    for (j = 3; j <= length(parts); j++) {
+                        line = line ":" parts[j]
+                    }
+
+                    split(line, fields, "|")
+                    if (length(fields) >= 5) {
+                        username = fields[1]
+                        gsub(/^[ \t]+|[ \t]+$/, "", username)
+
+                        ip = fields[2]
+                        gsub(/^[ \t]+|[ \t]+$/, "", ip)
+
+                        hostname = fields[3]
+                        gsub(/^[ \t]+|[ \t]+$/, "", hostname)
+
+                        share = fields[5]
+                        gsub(/^[ \t]+|[ \t]+$/, "", share)
+
+                        if (username != "" && ip != "" && share != "") {
+                            key = username "|" ip
+                            users[key] = username
+                            ips[key] = ip
+                            hostnames[key] = hostname
+                            shares[key] = share
+                        }
+                    }
+                    break
+                }
+            }
+        }
+        END {
+            printf "["
+            first = 1
+            for (key in users) {
+                if (!first) printf ","
+                first = 0
+                printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"SMB\",\"share_name\":\"%s\"}", \
+                    users[key], ips[key], hostnames[key], shares[key]
+            }
+            printf "]"
+        }
+        ' "$temp_file" 2>/dev/null || echo "[]")
+    fi
+
+    rm -f "$temp_file"
     echo "$connections"
 }
 
@@ -71,8 +118,8 @@ collect_all_connections() {
 }
 
 main() {
-    log "OpenMediaVault SMB Connection Monitor Agent v1.0.0"
-    log "Monitoring SMB/Windows connections for server: $SERVER_NAME"
+    log "OpenMediaVault SMB Connection Monitor Agent v1.1.0"
+    log "Monitoring SMB/Windows connections via audit logs for server: $SERVER_NAME"
     log "Reporting to: $API_URL"
     log "Check interval: ${CHECK_INTERVAL}s"
 
@@ -86,8 +133,8 @@ main() {
         exit 1
     fi
 
-    if ! command -v smbstatus &> /dev/null; then
-        log "WARNING: smbstatus not found. Make sure Samba is installed and running."
+    if ! command -v journalctl &> /dev/null && [ ! -f /var/log/syslog ]; then
+        log "WARNING: Neither journalctl nor /var/log/syslog found. Cannot monitor connections."
     fi
 
     while true; do
@@ -119,9 +166,27 @@ main() {
 if [ "$1" = "test" ]; then
     log "Running in test mode - collecting connections once..."
     echo ""
-    echo "Testing smbstatus output..."
+    echo "Testing SMB audit log parsing..."
     echo "---"
-    smbstatus -j 2>&1 | head -20
+    if command -v journalctl &> /dev/null; then
+        echo "Recent smbd_audit entries (last 10 successful operations):"
+        journalctl -u smbd -n 100 --no-pager --since "5 minutes ago" 2>/dev/null | \
+            grep "smbd_audit\[" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" | \
+            grep -v "guest user" | \
+            grep -v "gensec_spnego" | \
+            grep -E '\|(ok|OK)\|' | \
+            tail -10
+    else
+        echo "Recent smbd_audit entries from syslog (last 10 successful operations):"
+        tail -n 200 /var/log/syslog 2>/dev/null | \
+            grep "smbd_audit\[" | \
+            grep -v "NT_STATUS_ACCESS_DENIED" | \
+            grep -v "guest user" | \
+            grep -v "gensec_spnego" | \
+            grep -E '\|(ok|OK)\|' | \
+            tail -10
+    fi
     echo "---"
     echo ""
 
