@@ -27,8 +27,10 @@ SSH into your OpenMediaVault server and install the required packages:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y jq curl
+sudo apt-get install -y jq curl samba
 ```
+
+**Note:** Samba is usually already installed on OpenMediaVault, but we need to ensure the `smbstatus` command is available.
 
 ### 2. Download the Monitoring Script
 
@@ -76,28 +78,7 @@ CHECK_INTERVAL="300"
 
 **Note:** The SERVER_ID must match the UUID shown in your dashboard, not just a number.
 
-### 5. Enable SMB Audit Logging in OpenMediaVault
-
-**CRITICAL:** The script requires Samba audit logging to be enabled. If you see "Auditar SMB/CIFS" in your OMV interface (under Services > SMB/CIFS > Logs tab), it means audit logging is available.
-
-To verify audit logging is working:
-
-1. In OMV web interface, go to **Services > SMB/CIFS > Logs**
-2. Select **"Auditar SMB/CIFS"** from the dropdown
-3. You should see connection logs with operations like `pwrite`, `unlink`, `pread`
-4. If you see logs there, the script will be able to parse them
-
-If audit logs are not showing:
-
-```bash
-# Check if the audit VFS module is configured
-sudo grep "vfs objects.*audit" /etc/samba/smb.conf
-
-# If not configured, you may need to add it to your share configuration
-# This is typically done through OMV's web interface under Shared Folders settings
-```
-
-### 6. Test the Script
+### 5. Test the Script
 
 Run a test to verify the script can collect connection information:
 
@@ -106,46 +87,50 @@ sudo /usr/local/bin/monitor-agent-omv-connections.sh test
 ```
 
 The test output will show:
-- Which log sources are available
-- How many audit entries were found
-- Recent SMB operations
+- Whether `smbstatus` command is available
+- Raw output from `smbstatus`
 - Parsed connection data in JSON format
 
 Example output:
 ```
-=== Testing SMB Audit Log Parsing ===
+=== Testing smbstatus Connection Detection ===
 
-Checking available log sources...
-✓ journalctl available
-  Found 47 SMB audit entries in journalctl (last 10 minutes)
+✓ smbstatus command available
 
-=== Recent SMB Operations (last 10) ===
+=== Raw smbstatus Output (first 30 lines) ===
 ---
-Jan 09 12:14:20 nas smbd_audit: daniela.leon|192.168.3.133|DESKTOP-ABC|ok|NAS-RBUY|pwrite|...
-Jan 09 12:11:15 nas smbd_audit: daniela.leon|192.168.3.133|DESKTOP-ABC|ok|NAS-RBUY|unlink|...
+Samba version 4.9.5-Debian
+PID     Username     Group        Machine                                   Protocol Version  Encryption           Signing
+----------------------------------------------------------------------------------------------------------------------------------------
+69812   acruz        users        192.168.3.111 (ipv4:192.168.3.111:52509)  SMB3_11           -                    AES-128-CMAC
+67944   acontatore   users        192.168.3.178 (ipv4:192.168.3.178:49289)  SMB3_11           -                    AES-128-CMAC
 ---
 
 === Parsed Connection Data ===
 [
   {
-    "username": "daniela.leon",
-    "ip_address": "192.168.3.133",
-    "hostname": "192.168.3.133",
-    "protocol": "SMB",
-    "share_name": "NAS-RBUY"
+    "username": "acruz",
+    "ip_address": "192.168.3.111",
+    "hostname": "192.168.3.111",
+    "protocol": "SMB"
+  },
+  {
+    "username": "acontatore",
+    "ip_address": "192.168.3.178",
+    "hostname": "192.168.3.178",
+    "protocol": "SMB"
   }
 ]
 
 ✓ JSON validation: OK
-✓ Found 1 unique connection(s)
+✓ Found 2 unique connection(s)
 ```
 
 If you see `Found 0 unique connection(s)`, verify:
-- Audit logging is enabled (see step 5)
 - Users are actively accessing SMB shares
-- The log format matches what the script expects
+- Run `sudo smbstatus` manually to see if it shows connections
 
-### 7. Create systemd Service
+### 6. Create systemd Service
 
 Create a systemd service file:
 
@@ -158,7 +143,7 @@ Add the following content:
 ```ini
 [Unit]
 Description=OpenMediaVault Connection Monitor Agent
-After=network.target
+After=network.target smbd.service
 
 [Service]
 Type=simple
@@ -172,7 +157,7 @@ User=root
 WantedBy=multi-user.target
 ```
 
-### 8. Enable and Start the Service
+### 7. Enable and Start the Service
 
 ```bash
 sudo systemctl daemon-reload
@@ -180,7 +165,7 @@ sudo systemctl enable monitor-agent-omv-connections
 sudo systemctl start monitor-agent-omv-connections
 ```
 
-### 9. Verify the Service is Running
+### 8. Verify the Service is Running
 
 Check the service status:
 
@@ -196,30 +181,26 @@ sudo journalctl -u monitor-agent-omv-connections -f
 
 You should see logs like:
 ```
-[2026-01-09 12:15:30] OpenMediaVault SMB Connection Monitor Agent v1.2.0
+[2026-01-09 12:15:30] OpenMediaVault SMB Connection Monitor Agent v1.3.0
+[2026-01-09 12:15:30] Monitoring SMB/Windows connections via smbstatus for server: nas
 [2026-01-09 12:15:30] Collecting connection information...
-[2026-01-09 12:15:30] Found 1 active connection(s)
+[2026-01-09 12:15:30] Found 21 active connection(s)
 [2026-01-09 12:15:30] Reporting connections to API...
 [2026-01-09 12:15:30] Successfully reported connections
 ```
 
 ## What Gets Monitored
 
-The agent specifically tracks SMB/CIFS connections by parsing Samba audit logs.
+The agent tracks SMB/CIFS connections using the `smbstatus` command.
 
 ### SMB/CIFS Connections
 - Windows file sharing connections
-- Shows username, IP address, and shared folder
-- Tracked via Samba audit logs (smbd_audit module)
-- Monitors file operations: pwrite, pread, connect, mkdir, rmdir, unlink, rename
-- **Important:** Requires Samba audit VFS module to be enabled in OMV
+- Shows username and IP address of connected users
+- Tracked via `smbstatus` (real-time connection query)
+- Shows all active SMB sessions
+- **No special configuration required** - works out of the box with any Samba installation
 
-The script looks for logs in multiple locations:
-1. `journalctl -u smbd` (systemd journal)
-2. `/var/log/syslog`
-3. `/var/log/samba/audit.log`
-4. `/var/log/samba-audit.log`
-5. `/var/log/samba/log.smbd`
+The script uses `smbstatus` to get live connection data directly from the Samba daemon.
 
 ## Viewing Connection Data
 
@@ -240,40 +221,34 @@ The connection inventory shows:
 
 This is the most common issue. Follow these steps:
 
-1. **Verify audit logging is enabled:**
+1. **Run the test command:**
    ```bash
    sudo /usr/local/bin/monitor-agent-omv-connections.sh test
    ```
 
-   Check the "Checking available log sources" section. It should show a count > 0.
+   Check if `smbstatus` command is available and showing output.
 
-2. **Check OMV web interface:**
-   - Go to Services > SMB/CIFS > Logs
-   - Select "Auditar SMB/CIFS"
-   - You should see audit logs with operations like `pwrite`, `unlink`, etc.
-   - If empty, audit logging may not be enabled
-
-3. **Verify Samba audit VFS module:**
+2. **Check smbstatus directly:**
    ```bash
-   sudo grep "vfs objects" /etc/samba/smb.conf
+   sudo smbstatus
    ```
 
-   Should include `audit` in the list. Example:
-   ```
-   vfs objects = audit
-   ```
+   This should show all active SMB connections. If it shows connections but the script finds 0, please report this issue.
 
-4. **Check if users are actually connected:**
+3. **Check if users are actually connected:**
    - Make sure someone is actively using SMB shares
-   - Try copying a file to/from the NAS via Windows Explorer
-   - Run the test command again
+   - Open a file from the NAS via Windows Explorer (don't just browse)
+   - Run `sudo smbstatus` again to verify connections appear
 
-5. **Check journal logs directly:**
+4. **Verify Samba is running:**
    ```bash
-   sudo journalctl -u smbd -n 100 --since "5 minutes ago" | grep -E "(pwrite|pread|connect)"
+   sudo systemctl status smbd
    ```
 
-   If this shows nothing, the audit logs aren't being generated.
+   If not running, start it:
+   ```bash
+   sudo systemctl start smbd
+   ```
 
 ### SMB service not running
 
@@ -301,14 +276,15 @@ curl -v http://YOUR_DASHBOARD_SERVER:3001/api/health
 
 Verify firewall rules allow outbound connections to your dashboard server.
 
-### Log format doesn't match
+### smbstatus command not found
 
-If you see audit logs in OMV but the script isn't parsing them, run:
+If the test shows "smbstatus command not found":
 ```bash
-sudo journalctl -u smbd -n 20 --since "5 minutes ago" | grep smbd_audit
+sudo apt-get update
+sudo apt-get install -y samba
 ```
 
-Send this output to support for analysis. The log format may need adjustment.
+On OpenMediaVault, Samba should already be installed. If not, you may need to enable SMB/CIFS service in the OMV web interface first.
 
 ## Updating the Script
 
