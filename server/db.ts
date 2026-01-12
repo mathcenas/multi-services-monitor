@@ -233,4 +233,17 @@ if (!checkColumn('servers', 'cpu_usage')) {
   console.log('Migration completed: system metrics columns added');
 }
 
+if (!checkColumn('servers', 'type')) {
+  console.log('Adding type and status columns to servers table...');
+  db.exec(`
+    ALTER TABLE servers ADD COLUMN type TEXT;
+    ALTER TABLE servers ADD COLUMN status TEXT;
+  `);
+  console.log('Migration completed: type and status columns added');
+}
+
+console.log('Updating existing servers without status...');
+db.prepare(`UPDATE servers SET status = 'active' WHERE status IS NULL`).run();
+console.log('Database initialization complete');
+
 export default db;

@@ -974,17 +974,22 @@ app.post('/api/connections/report', (req, res) => {
 
       if (!server) {
         console.log('Auto-registering server with ID:', server_id);
+        console.log('  Name:', server_name || hostname || 'Unknown');
+        console.log('  Hostname:', hostname || server_name || 'Unknown');
         try {
           db.prepare(`
-            INSERT INTO servers (id, name, hostname, type, status, created_at, updated_at)
-            VALUES (?, ?, ?, 'omv', 'active', datetime('now'), datetime('now'))
+            INSERT INTO servers (id, name, hostname, type, status, last_seen, created_at, updated_at)
+            VALUES (?, ?, ?, 'omv', 'active', datetime('now'), datetime('now'), datetime('now'))
           `).run(server_id, server_name || hostname || 'Unknown', hostname || server_name || 'Unknown');
 
           server = { id: server_id };
+          console.log('✓ Server auto-registered successfully');
         } catch (error: any) {
           console.error('Failed to auto-register server:', error);
           return res.status(500).json({ error: 'Failed to register server' });
         }
+      } else {
+        console.log('Server found with ID:', server_id);
       }
     } else {
       server = db.prepare('SELECT id FROM servers WHERE name = ? OR hostname = ?').get(server_name, hostname);
@@ -997,6 +1002,8 @@ app.post('/api/connections/report', (req, res) => {
 
     const serverId = (server as any).id;
     const now = new Date().toISOString();
+
+    db.prepare('UPDATE servers SET last_seen = ? WHERE id = ?').run(now, serverId);
 
     db.prepare('UPDATE network_connections SET is_active = 0, disconnected_at = ? WHERE server_id = ? AND is_active = 1')
       .run(now, serverId);
@@ -1043,6 +1050,8 @@ app.post('/api/connections/report', (req, res) => {
         added++;
       }
     }
+
+    console.log(`✓ Connections processed: ${added} added, ${updated} updated, ${connections.length} total`);
 
     res.json({
       success: true,
