@@ -970,6 +970,17 @@ app.post('/api/connections/report', (req, res) => {
 
     let server;
     if (server_id) {
+      const isValidId = /^[a-f0-9]{32}$/.test(server_id);
+      if (!isValidId) {
+        console.error('Invalid server_id format:', server_id);
+        console.error('  Expected: 32-character hex UUID (e.g., 1adf33dc9ef39ee3572f87059aaded6a)');
+        console.error('  Received:', server_id);
+        return res.status(400).json({
+          error: 'Invalid server_id format. Must be a 32-character hex UUID.',
+          hint: 'Check your SERVER_ID environment variable. Example: export SERVER_ID=1adf33dc9ef39ee3572f87059aaded6a'
+        });
+      }
+
       server = db.prepare('SELECT id FROM servers WHERE id = ?').get(server_id);
 
       if (!server) {
@@ -1071,14 +1082,43 @@ app.get('/api/debug/servers', (req, res) => {
     const servers = db.prepare('SELECT id, name, hostname, type, status, client_id, last_seen FROM servers').all();
     const connections = db.prepare('SELECT server_id, COUNT(*) as count FROM network_connections WHERE is_active = 1 GROUP BY server_id').all();
 
+    const invalidServers = servers.filter((s: any) => !/^[a-f0-9]{32}$/.test(s.id));
+
     res.json({
       servers,
       connections,
+      invalidServers,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Failed to fetch debug data:', error);
     res.status(500).json({ error: 'Failed to fetch debug data' });
+  }
+});
+
+app.delete('/api/debug/cleanup-invalid-servers', (req, res) => {
+  try {
+    const servers = db.prepare('SELECT id, name FROM servers').all();
+    const invalidServers = servers.filter((s: any) => !/^[a-f0-9]{32}$/.test(s.id));
+
+    console.log('Found invalid servers to clean up:', invalidServers);
+
+    for (const server of invalidServers) {
+      console.log('Deleting invalid server:', (server as any).id, (server as any).name);
+
+      db.prepare('DELETE FROM network_connections WHERE server_id = ?').run((server as any).id);
+      db.prepare('DELETE FROM services WHERE server_id = ?').run((server as any).id);
+      db.prepare('DELETE FROM servers WHERE id = ?').run((server as any).id);
+    }
+
+    res.json({
+      success: true,
+      deleted: invalidServers.length,
+      servers: invalidServers
+    });
+  } catch (error) {
+    console.error('Failed to cleanup invalid servers:', error);
+    res.status(500).json({ error: 'Failed to cleanup invalid servers' });
   }
 });
 

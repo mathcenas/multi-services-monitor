@@ -57,7 +57,9 @@ export function groupServicesByType<T extends { type?: string }>(services: T[]):
 export function isBackupService(name?: string): boolean {
   if (!name) return false;
   const lowerName = name.toLowerCase();
-  return lowerName.includes('backup') || lowerName.includes('veeam');
+  return lowerName.includes('backup') ||
+         lowerName.includes('veeam') ||
+         lowerName.includes('rsnapshot');
 }
 
 export type BackupStatus = 'fresh' | 'aging' | 'stale' | 'critical' | 'unknown';
@@ -145,7 +147,8 @@ const LATEST_AGENT_VERSIONS: Record<string, string> = {
   'monitor-agent.sh': '1.2.0',
   'monitor-agent.ps1': '1.1.0',
   'monitor-agent-mikrotik.sh': '1.1.0',
-  'monitor-agent-rsnapshot.sh': '1.2.0'
+  'monitor-agent-rsnapshot.sh': '1.2.0',
+  'monitor-agent-omv-connections.sh': '1.3.3'
 };
 
 export function isAgentOutdated(agentType?: string, agentVersion?: string): boolean {
@@ -174,6 +177,8 @@ export function getAgentDisplayName(agentType?: string): string {
       return 'MikroTik Agent';
     case 'monitor-agent-rsnapshot.sh':
       return 'Rsnapshot Agent';
+    case 'monitor-agent-omv-connections.sh':
+      return 'OMV Connections Agent';
     default:
       return agentType;
   }
