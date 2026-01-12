@@ -692,7 +692,9 @@ export function Dashboard() {
                         <p className="text-sm text-gray-600">
                           {server.client && <span className="font-medium text-blue-600">{server.client.name}</span>}
                           {server.client && ' • '}
-                          {server.hostname} • {server.cloud_provider}
+                          {server.hostname || 'No hostname'}
+                          {server.cloud_provider && ` • ${server.cloud_provider}`}
+                          {(server as any).type && ` • ${(server as any).type.toUpperCase()}`}
                         </p>
                         {server.agent_type && server.agent_version && (
                           <p className="text-xs text-gray-500 mt-0.5">
@@ -702,6 +704,11 @@ export function Dashboard() {
                                 (Update available: v{latestVersion})
                               </span>
                             )}
+                          </p>
+                        )}
+                        {!(server.agent_type && server.agent_version) && (server as any).type && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Type: {(server as any).type} {(server as any).status && `• Status: ${(server as any).status}`}
                           </p>
                         )}
                         {(server.cpu_usage != null || server.memory_usage != null) && (

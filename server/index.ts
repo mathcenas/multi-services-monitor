@@ -1066,8 +1066,26 @@ app.post('/api/connections/report', (req, res) => {
   }
 });
 
+app.get('/api/debug/servers', (req, res) => {
+  try {
+    const servers = db.prepare('SELECT id, name, hostname, type, status, client_id, last_seen FROM servers').all();
+    const connections = db.prepare('SELECT server_id, COUNT(*) as count FROM network_connections WHERE is_active = 1 GROUP BY server_id').all();
+
+    res.json({
+      servers,
+      connections,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Failed to fetch debug data:', error);
+    res.status(500).json({ error: 'Failed to fetch debug data' });
+  }
+});
+
 app.get('/api/servers/:serverId/connections', (req, res) => {
   try {
+    console.log('Fetching connections for server:', req.params.serverId);
+
     const activeConnections = db.prepare(`
       SELECT * FROM network_connections
       WHERE server_id = ? AND is_active = 1
@@ -1089,6 +1107,8 @@ app.get('/api/servers/:serverId/connections', (req, res) => {
       WHERE server_id = ? AND is_active = 1
       GROUP BY protocol
     `).all(req.params.serverId);
+
+    console.log(`  Active connections: ${activeConnections.length}, Recent: ${recentConnections.length}`);
 
     res.json({
       active: activeConnections,
