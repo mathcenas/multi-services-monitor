@@ -693,6 +693,7 @@ export function Dashboard() {
                           {server.client && <span className="font-medium text-blue-600">{server.client.name}</span>}
                           {server.client && ' • '}
                           {server.hostname || 'No hostname'}
+                          {server.os && server.os_version && ` • ${server.os} ${server.os_version}`}
                           {server.cloud_provider && ` • ${server.cloud_provider}`}
                           {(server as any).type && ` • ${(server as any).type.toUpperCase()}`}
                         </p>

@@ -608,7 +608,9 @@ app.post('/api/status', (req, res) => {
       memory_usage,
       memory_total_mb,
       memory_used_mb,
-      memory_available_mb
+      memory_available_mb,
+      os,
+      os_version
     } = req.body;
 
     let server;
@@ -670,6 +672,16 @@ app.post('/api/status', (req, res) => {
     if (memory_available_mb !== undefined) {
       serverUpdateFields.push('memory_available_mb = ?');
       serverUpdateValues.push(memory_available_mb);
+    }
+
+    if (os) {
+      serverUpdateFields.push('os = ?');
+      serverUpdateValues.push(os);
+    }
+
+    if (os_version) {
+      serverUpdateFields.push('os_version = ?');
+      serverUpdateValues.push(os_version);
     }
 
     serverUpdateValues.push((server as any).id);

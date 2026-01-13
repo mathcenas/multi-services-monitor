@@ -10,6 +10,21 @@ AUTO_UPDATE="${AUTO_UPDATE:-true}"
 UPDATE_CHECK_INTERVAL="${UPDATE_CHECK_INTERVAL:-86400}"
 LAST_UPDATE_CHECK_FILE="/tmp/monitor-agent-last-update-check"
 
+OS_INFO=$(get_os_info() {
+    if [ -f "/etc/os-release" ]; then
+        . /etc/os-release
+        echo "${ID}|${VERSION_ID}|${NAME} ${VERSION_ID}"
+    elif [ -f "/etc/redhat-release" ]; then
+        content=$(cat /etc/redhat-release)
+        version=$(echo "$content" | sed -E 's/.*release ([0-9.]+).*/\1/')
+        echo "rhel|${version}|${content}"
+    else
+        echo "unknown|unknown|Unknown OS"
+    fi
+}; get_os_info)
+OS_ID=$(echo "$OS_INFO" | cut -d'|' -f1)
+OS_VERSION=$(echo "$OS_INFO" | cut -d'|' -f2)
+
 fetch_config() {
     local server_id=$1
     curl -s "${API_URL}/servers/${server_id}/services.json"
@@ -262,7 +277,9 @@ send_status() {
         \"status\": \"${status}\",
         \"message\": \"${message}\",
         \"agent_version\": \"${AGENT_VERSION}\",
-        \"agent_type\": \"monitor-agent.sh\""
+        \"agent_type\": \"monitor-agent.sh\",
+        \"os\": \"${OS_ID}\",
+        \"os_version\": \"${OS_VERSION}\""
 
     if [ -n "$version" ]; then
         json_data="${json_data},
