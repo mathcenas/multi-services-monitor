@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGENT_VERSION="1.3.3"
+AGENT_VERSION="1.3.4"
 API_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}/api"
 BASE_URL="${MONITOR_API_URL:-https://stats.cenas-support.com}"
 SERVER_NAME=$(hostname)
@@ -41,6 +41,33 @@ report_connections() {
     fi
 }
 
+resolve_hostname() {
+    local ip="$1"
+    local hostname
+
+    # Try to resolve hostname using host command (fast)
+    if command -v host &> /dev/null; then
+        hostname=$(host -W 1 "$ip" 2>/dev/null | grep 'domain name pointer' | awk '{print $NF}' | sed 's/\.$//')
+    fi
+
+    # Fallback to nslookup if host didn't work
+    if [ -z "$hostname" ] && command -v nslookup &> /dev/null; then
+        hostname=$(nslookup "$ip" 2>/dev/null | grep 'name = ' | awk '{print $NF}' | sed 's/\.$//')
+    fi
+
+    # If still no hostname, try getent
+    if [ -z "$hostname" ] && command -v getent &> /dev/null; then
+        hostname=$(getent hosts "$ip" 2>/dev/null | awk '{print $2}')
+    fi
+
+    # Return hostname or IP if resolution failed
+    if [ -z "$hostname" ]; then
+        echo "$ip"
+    else
+        echo "$hostname"
+    fi
+}
+
 get_smb_connections() {
     local connections="[]"
 
@@ -49,7 +76,8 @@ get_smb_connections() {
         return
     fi
 
-    connections=$(smbstatus 2>/dev/null | awk '
+    # First pass: collect IPs and usernames
+    local temp_data=$(smbstatus 2>/dev/null | awk '
     BEGIN {
         in_connections_section = 0
     }
@@ -127,16 +155,31 @@ get_smb_connections() {
     }
 
     END {
-        printf "["
-        first = 1
         for (key in users) {
-            if (!first) printf ","
-            first = 0
-            printf "{\"username\":\"%s\",\"ip_address\":\"%s\",\"hostname\":\"%s\",\"protocol\":\"SMB\"}", users[key], ips[key], ips[key]
+            print users[key] "|" ips[key]
         }
-        printf "]"
     }
     ')
+
+    # Second pass: resolve hostnames and build JSON
+    connections="["
+    first=true
+    while IFS='|' read -r username ip; do
+        [ -z "$ip" ] && continue
+
+        # Resolve hostname
+        hostname=$(resolve_hostname "$ip")
+
+        # Build JSON
+        if [ "$first" = true ]; then
+            first=false
+        else
+            connections+=","
+        fi
+
+        connections+="{\"username\":\"$username\",\"ip_address\":\"$ip\",\"hostname\":\"$hostname\",\"protocol\":\"SMB\"}"
+    done <<< "$temp_data"
+    connections+="]"
 
     echo "$connections"
 }
