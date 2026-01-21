@@ -88,7 +88,35 @@ Connect to your MikroTik via Winbox or terminal:
    ./monitor-agent-mikrotik.sh
    ```
 
-5. **Run as a systemd service:**
+5. **Run with nohup (background process):**
+
+   If systemd is not available or you prefer to run as a background process:
+
+   ```bash
+   # Set environment variables and run with nohup
+   export MONITOR_API_URL="https://stats.cenas-support.com"
+   export SERVER_ID="2"
+   export MIKROTIK_HOST="192.168.88.1"
+   export MIKROTIK_USER="admin"
+   export MIKROTIK_KEY="/root/.ssh/mikrotik_monitor"
+
+   nohup ./monitor-agent-mikrotik.sh > /var/log/monitor-mikrotik.log 2>&1 &
+
+   # Check if it's running
+   ps aux | grep monitor-agent-mikrotik.sh
+
+   # Stop the agent
+   pkill -f monitor-agent-mikrotik.sh
+   ```
+
+   **To make it persistent after reboot, add to crontab:**
+   ```bash
+   crontab -e
+   # Add this line (adjust paths and variables as needed):
+   @reboot export MONITOR_API_URL="https://stats.cenas-support.com" && export SERVER_ID="2" && export MIKROTIK_HOST="192.168.88.1" && export MIKROTIK_USER="admin" && export MIKROTIK_KEY="/root/.ssh/mikrotik_monitor" && cd /opt/monitor-agent && nohup ./monitor-agent-mikrotik.sh > /var/log/monitor-mikrotik.log 2>&1 &
+   ```
+
+6. **Run as a systemd service (recommended for systemd-based systems):**
 
    Create `/etc/systemd/system/monitor-mikrotik.service`:
    ```ini
@@ -193,7 +221,40 @@ You can customize warning and critical thresholds:
    ./monitor-agent.sh
    ```
 
-4. **Run as a systemd service (recommended):**
+4. **Run with nohup (background process):**
+
+   If systemd is not available or you prefer to run as a background process:
+
+   ```bash
+   # Basic nohup command (logs to nohup.out in current directory)
+   nohup ./monitor-agent.sh &
+
+   # Better: Redirect output to a log file
+   nohup ./monitor-agent.sh > /var/log/monitor-agent.log 2>&1 &
+
+   # Get the process ID
+   echo $!
+
+   # Check if it's running
+   ps aux | grep monitor-agent.sh
+
+   # Stop the agent
+   pkill -f monitor-agent.sh
+   ```
+
+   **To make it persistent after reboot, add to crontab:**
+   ```bash
+   crontab -e
+   # Add this line:
+   @reboot cd /opt/monitor-agent && nohup ./monitor-agent.sh > /var/log/monitor-agent.log 2>&1 &
+   ```
+
+   **View logs:**
+   ```bash
+   tail -f /var/log/monitor-agent.log
+   ```
+
+5. **Run as a systemd service (recommended for systemd-based systems):**
 
    Create `/etc/systemd/system/monitor-agent.service`:
    ```ini
