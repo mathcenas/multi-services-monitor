@@ -179,6 +179,16 @@ For each server, add the services you want to monitor:
 - Type: process
 - Check Command: `pgrep -f custom-app`
 
+**TCP Port Checks**
+- Name: MySQL Port Check
+- Type: custom
+- Check Command: `192.168.1.100:3306`
+
+**External Service Check**
+- Name: Google DNS
+- Type: custom
+- Check Command: `8.8.8.8:53`
+
 #### Windows Services
 
 **IIS Web Server**

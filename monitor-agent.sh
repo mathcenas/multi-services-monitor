@@ -110,8 +110,51 @@ perform_update() {
     exec "$script_path" "$@"
 }
 
+check_tcp_port() {
+    local host=$1
+    local port=$2
+    local timeout=${3:-5}
+
+    if command -v nc >/dev/null 2>&1; then
+        if nc -z -w "$timeout" "$host" "$port" >/dev/null 2>&1; then
+            echo "active"
+        else
+            echo "inactive"
+        fi
+    elif command -v timeout >/dev/null 2>&1 && command -v bash >/dev/null 2>&1; then
+        if timeout "$timeout" bash -c "cat < /dev/null > /dev/tcp/$host/$port" 2>/dev/null; then
+            echo "active"
+        else
+            echo "inactive"
+        fi
+    else
+        echo "error"
+    fi
+}
+
 check_service() {
     local check_command=$1
+
+    # Check if it's a TCP port check command (format: nc -z host port or similar)
+    if echo "$check_command" | grep -q "nc -z"; then
+        # Extract host and port from command like "nc -z 192.168.1.1 80" or "nc -z example.com 443"
+        local host=$(echo "$check_command" | awk '{print $3}')
+        local port=$(echo "$check_command" | awk '{print $4}')
+        if [ -n "$host" ] && [ -n "$port" ]; then
+            check_tcp_port "$host" "$port" 5
+            return
+        fi
+    fi
+
+    # Check if it's a direct host:port format
+    if echo "$check_command" | grep -qE '^[a-zA-Z0-9.-]+:[0-9]+$'; then
+        local host=$(echo "$check_command" | cut -d':' -f1)
+        local port=$(echo "$check_command" | cut -d':' -f2)
+        check_tcp_port "$host" "$port" 5
+        return
+    fi
+
+    # Default behavior: evaluate the command as-is
     if eval "$check_command" >/dev/null 2>&1; then
         echo "active"
     else

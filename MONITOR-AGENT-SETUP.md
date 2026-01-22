@@ -298,7 +298,32 @@ pgrep mysqld
 
 # Custom URL check
 curl -s https://api.example.com/health | grep -q "ok"
+
+# TCP Port Checks (using netcat)
+# Simple format - host:port
+192.168.1.100:3306
+example.com:443
+8.8.8.8:53
+
+# Full netcat command format
+nc -z 192.168.1.100 3306
+nc -z example.com 443
+nc -z 8.8.8.8 53
 ```
+
+#### Common TCP Port Check Examples
+
+| Service | Check Command | Description |
+|---------|--------------|-------------|
+| MySQL | `192.168.1.100:3306` | Check MySQL port |
+| PostgreSQL | `192.168.1.100:5432` | Check PostgreSQL port |
+| MongoDB | `192.168.1.100:27017` | Check MongoDB port |
+| Redis | `127.0.0.1:6379` | Check Redis port |
+| SSH | `192.168.1.100:22` | Check SSH connectivity |
+| SMTP | `mail.example.com:25` | Check mail server |
+| DNS | `8.8.8.8:53` | Check Google DNS |
+| HTTPS | `example.com:443` | Check HTTPS port |
+| Custom Service | `192.168.1.50:8080` | Check custom application port |
 
 ---
 
@@ -460,6 +485,11 @@ C:\inetpub
 | process | node-app | `pgrep -f "node app.js"` | - |
 | custom | API Health | `curl -sf http://localhost:3000/health` | - |
 | systemd | samba | `systemctl is-active smbd` | `/mnt/nas` |
+| custom | MySQL Port | `192.168.1.100:3306` | - |
+| custom | PostgreSQL Port | `192.168.1.100:5432` | - |
+| custom | Redis Port | `127.0.0.1:6379` | - |
+| custom | External HTTPS | `example.com:443` | - |
+| custom | Google DNS | `8.8.8.8:53` | - |
 
 ### Windows Services
 
