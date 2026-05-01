@@ -242,8 +242,22 @@ if (!checkColumn('servers', 'type')) {
   console.log('Migration completed: type and status columns added');
 }
 
+if (!checkColumn('servers', 'push_token')) {
+  console.log('Adding push_token column to servers table...');
+  db.exec(`ALTER TABLE servers ADD COLUMN push_token TEXT;`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_servers_push_token ON servers(push_token);`);
+  console.log('Migration completed: push_token column added');
+}
+
 console.log('Updating existing servers without status...');
 db.prepare(`UPDATE servers SET status = 'active' WHERE status IS NULL`).run();
+
+console.log('Generating push tokens for servers without one...');
+const serversNeedingTokens = db.prepare(`SELECT id FROM servers WHERE push_token IS NULL OR push_token = ''`).all() as { id: string }[];
+for (const s of serversNeedingTokens) {
+  const token = (db.prepare(`SELECT lower(hex(randomblob(24))) AS t`).get() as { t: string }).t;
+  db.prepare(`UPDATE servers SET push_token = ? WHERE id = ?`).run(token, s.id);
+}
 console.log('Database initialization complete');
 
 export default db;

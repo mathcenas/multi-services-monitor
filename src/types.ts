@@ -21,6 +21,7 @@ export interface Server {
   os_version?: string;
   last_seen?: string;
   notes?: string;
+  push_token?: string;
   agent_version?: string;
   agent_type?: string;
   cpu_usage?: number;

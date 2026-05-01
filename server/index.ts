@@ -19,6 +19,10 @@ function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+function generatePushToken(): string {
+  return (db.prepare(`SELECT lower(hex(randomblob(24))) AS t`).get() as { t: string }).t;
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -99,6 +103,20 @@ app.get('/monitor-agent-rsnapshot.sh', (req, res) => {
     res.send(content);
   } catch (error) {
     console.error('Error serving monitor-agent-rsnapshot.sh:', error);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
+  }
+});
+
+app.get('/monitor-agent-push.sh', (req, res) => {
+  try {
+    const scriptPath = getScriptPath('monitor-agent-push.sh');
+    const content = fs.readFileSync(scriptPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitor-agent-push.sh"');
+    res.send(content);
+  } catch (error) {
+    console.error('Error serving monitor-agent-push.sh:', error);
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.status(404).send(`#!/bin/bash\n# Error: Script file not found on server\n# ${error instanceof Error ? error.message : String(error)}\n`);
   }
@@ -361,8 +379,8 @@ app.post('/api/servers', (req, res) => {
   try {
     const { client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes } = req.body;
     const server = db.prepare(`
-      INSERT INTO servers (client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO servers (client_id, name, hostname, ip_address, cloud_provider, os, os_version, description, notes, push_token)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).get(
       client_id ?? null,
@@ -373,7 +391,8 @@ app.post('/api/servers', (req, res) => {
       os ?? null,
       os_version ?? null,
       description ?? null,
-      notes ?? null
+      notes ?? null,
+      generatePushToken()
     );
 
     res.status(201).json(server);
@@ -586,6 +605,139 @@ app.delete('/api/services/:id', (req, res) => {
   } catch (error) {
     console.error('Failed to delete service:', error);
     res.status(500).json({ error: 'Failed to delete service' });
+  }
+});
+
+app.post('/api/servers/:id/rotate-token', (req, res) => {
+  try {
+    const token = generatePushToken();
+    db.prepare('UPDATE servers SET push_token = ? WHERE id = ?').run(token, req.params.id);
+    const server = db.prepare('SELECT * FROM servers WHERE id = ?').get(req.params.id);
+    if (!server) return res.status(404).json({ error: 'Server not found' });
+    res.json(server);
+  } catch (error) {
+    console.error('Failed to rotate token:', error);
+    res.status(500).json({ error: 'Failed to rotate token' });
+  }
+});
+
+app.get('/api/services/:id/history', (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
+    const hours = parseInt(req.query.hours as string) || 168;
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+    const history = db.prepare(`
+      SELECT id, status, message, checked_at
+      FROM service_status
+      WHERE service_id = ? AND checked_at >= ?
+      ORDER BY checked_at DESC
+      LIMIT ?
+    `).all(req.params.id, since, limit);
+
+    res.json(history);
+  } catch (error) {
+    console.error('Failed to fetch history:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+app.post('/api/push', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : (req.body.push_token || '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'Missing push token. Use Authorization: Bearer <token> header.' });
+    }
+
+    const server = db.prepare('SELECT id, name FROM servers WHERE push_token = ?').get(token) as any;
+    if (!server) {
+      return res.status(401).json({ error: 'Invalid push token' });
+    }
+
+    const {
+      services,
+      agent_version,
+      agent_type,
+      cpu_usage,
+      memory_usage,
+      memory_total_mb,
+      memory_used_mb,
+      memory_available_mb,
+      os,
+      os_version
+    } = req.body;
+
+    const updates: string[] = ['last_seen = CURRENT_TIMESTAMP'];
+    const values: any[] = [];
+    const pushField = (col: string, val: any) => {
+      if (val !== undefined && val !== null) {
+        updates.push(`${col} = ?`);
+        values.push(val);
+      }
+    };
+    pushField('agent_version', agent_version);
+    pushField('agent_type', agent_type);
+    pushField('cpu_usage', cpu_usage);
+    pushField('memory_usage', memory_usage);
+    pushField('memory_total_mb', memory_total_mb);
+    pushField('memory_used_mb', memory_used_mb);
+    pushField('memory_available_mb', memory_available_mb);
+    pushField('os', os);
+    pushField('os_version', os_version);
+    values.push(server.id);
+    db.prepare(`UPDATE servers SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+    const results: any[] = [];
+    if (Array.isArray(services)) {
+      for (const svc of services) {
+        if (!svc.name || !svc.status) continue;
+
+        let service = db.prepare(
+          'SELECT id FROM services WHERE server_id = ? AND name = ? COLLATE NOCASE'
+        ).get(server.id, svc.name) as any;
+
+        if (!service) {
+          service = db.prepare(`
+            INSERT INTO services (server_id, name, type, status, check_command, check_interval)
+            VALUES (?, ?, ?, ?, '', 300)
+            RETURNING id
+          `).get(server.id, svc.name, svc.type || 'systemd', svc.status);
+        }
+
+        const svcUpdates: string[] = ['status = ?', 'last_check = CURRENT_TIMESTAMP'];
+        const svcValues: any[] = [svc.status];
+        const pushSvc = (col: string, val: any) => {
+          if (val !== undefined && val !== null) {
+            svcUpdates.push(`${col} = ?`);
+            svcValues.push(val);
+          }
+        };
+        pushSvc('message', svc.message);
+        pushSvc('version', svc.version);
+        pushSvc('disk_usage', svc.disk_usage);
+        pushSvc('disk_total', svc.disk_total);
+        pushSvc('disk_used', svc.disk_used);
+        pushSvc('disk_available', svc.disk_available);
+        pushSvc('disk_path', svc.disk_path);
+        pushSvc('type', svc.type);
+        svcValues.push(service.id);
+        db.prepare(`UPDATE services SET ${svcUpdates.join(', ')} WHERE id = ?`).run(...svcValues);
+
+        db.prepare(`
+          INSERT INTO service_status (service_id, status, message, checked_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        `).run(service.id, svc.status, svc.message || null);
+
+        results.push({ name: svc.name, id: service.id });
+      }
+    }
+
+    res.json({ success: true, server_id: server.id, services: results });
+  } catch (error) {
+    console.error('Failed to process push:', error);
+    res.status(500).json({ error: 'Failed to process push' });
   }
 });
 

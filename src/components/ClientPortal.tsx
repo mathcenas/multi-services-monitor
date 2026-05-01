@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive, Archive } from 'lucide-react';
+import { Building2, Server, Activity, CheckCircle2, XCircle, AlertCircle, HardDrive, Archive, History } from 'lucide-react';
 import { Client } from '../types';
-import { getClientBySlug } from '../api';
+import { getClientBySlug, getServiceHistory, ServiceHistoryEntry } from '../api';
 import { getRelativeTime, isBackupService, getBackupAgeStatus, getBackupStatusColors, getBackupStatusLabel } from '../utils';
 
 interface ClientPortalProps {
@@ -12,6 +12,7 @@ export function ClientPortal({ slug }: ClientPortalProps) {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set());
+  const [history, setHistory] = useState<Record<string, ServiceHistoryEntry[]>>({});
 
   useEffect(() => {
     loadClient();
@@ -52,6 +53,12 @@ export function ClientPortal({ slug }: ClientPortalProps) {
       newExpanded.delete(serviceId);
     } else {
       newExpanded.add(serviceId);
+      const key = String(serviceId);
+      if (!history[key]) {
+        getServiceHistory(key, 168, 50)
+          .then((data) => setHistory((h) => ({ ...h, [key]: data })))
+          .catch((err) => console.error('Failed to load history:', err));
+      }
     }
     setExpandedServices(newExpanded);
   };
@@ -409,6 +416,36 @@ export function ClientPortal({ slug }: ClientPortalProps) {
                                                   style={{ width: `${service.disk_usage}%` }}
                                                 ></div>
                                               </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                        {history[String(service.id)] && history[String(service.id)].length > 0 && (
+                                          <div className="mt-3 pt-2 border-t-2 border-gray-400">
+                                            <div className="flex items-center gap-1 text-xs font-medium text-gray-700 mb-2">
+                                              <History size={12} />
+                                              Recent Status History
+                                            </div>
+                                            <div className="max-h-40 overflow-y-auto space-y-1">
+                                              {history[String(service.id)].slice(0, 20).map((entry) => (
+                                                <div key={entry.id} className="flex items-start gap-2 text-xs bg-white bg-opacity-60 rounded px-2 py-1">
+                                                  <span className={`mt-0.5 inline-block h-2 w-2 rounded-full flex-shrink-0 ${
+                                                    entry.status === 'active' || entry.status === 'up' ? 'bg-green-500' :
+                                                    entry.status === 'inactive' || entry.status === 'down' ? 'bg-red-500' :
+                                                    'bg-gray-400'
+                                                  }`}></span>
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                      <span className="font-medium text-gray-800">{entry.status}</span>
+                                                      <span className="text-gray-500 text-[10px]">
+                                                        {new Date(entry.checked_at).toLocaleString()}
+                                                      </span>
+                                                    </div>
+                                                    {entry.message && (
+                                                      <div className="text-gray-600 truncate">{entry.message}</div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
                                             </div>
                                           </div>
                                         )}

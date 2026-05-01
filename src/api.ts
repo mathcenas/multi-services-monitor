@@ -79,6 +79,27 @@ export async function updateServer(id: string, data: Partial<Server>): Promise<S
   return response.json();
 }
 
+export async function rotateServerPushToken(id: string): Promise<Server> {
+  const response = await fetch(`${API_BASE}/servers/${id}/rotate-token`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to rotate token');
+  return response.json();
+}
+
+export interface ServiceHistoryEntry {
+  id: number;
+  status: string;
+  message: string | null;
+  checked_at: string;
+}
+
+export async function getServiceHistory(serviceId: string, hours = 168, limit = 100): Promise<ServiceHistoryEntry[]> {
+  const response = await fetch(`${API_BASE}/services/${serviceId}/history?hours=${hours}&limit=${limit}`);
+  if (!response.ok) throw new Error('Failed to fetch history');
+  return response.json();
+}
+
 export async function deleteServer(id: string): Promise<void> {
   const response = await fetch(`${API_BASE}/servers/${id}`, {
     method: 'DELETE',

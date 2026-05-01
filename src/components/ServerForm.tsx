@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Server } from '../types';
-import { X, Server as ServerIcon, Info, Users, Download } from 'lucide-react';
+import { X, Server as ServerIcon, Info, Users, Download, Upload, Copy, RotateCw, Check } from 'lucide-react';
+import { rotateServerPushToken } from '../api';
 
 interface ServerFormProps {
   server?: Server;
@@ -17,6 +18,10 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
   });
   const [saving, setSaving] = useState(false);
   const [showConnectionInfo, setShowConnectionInfo] = useState(false);
+  const [showPushInfo, setShowPushInfo] = useState(false);
+  const [pushToken, setPushToken] = useState<string | undefined>(server?.push_token);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [rotating, setRotating] = useState(false);
 
   useEffect(() => {
     if (server) {
@@ -45,6 +50,26 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
   };
 
   const apiUrl = window.location.origin;
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  const handleRotate = async () => {
+    if (!server) return;
+    if (!confirm('Rotate the push token? The current token will stop working immediately.')) return;
+    setRotating(true);
+    try {
+      const updated = await rotateServerPushToken(server.id);
+      setPushToken(updated.push_token);
+    } catch (err) {
+      alert('Failed to rotate token');
+    } finally {
+      setRotating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -122,6 +147,102 @@ export function ServerForm({ server, onSubmit, onClose }: ServerFormProps) {
               placeholder="Internal notes about this server..."
             />
           </div>
+
+          {server && pushToken && (
+            <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
+              <button
+                type="button"
+                onClick={() => setShowPushInfo(!showPushInfo)}
+                className="flex items-center gap-2 text-emerald-700 font-medium hover:text-emerald-800 w-full justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Upload size={18} />
+                  <span>Push Mode Setup (Recommended)</span>
+                </div>
+                <Info size={16} />
+              </button>
+
+              {showPushInfo && (
+                <div className="mt-3 space-y-3 text-sm text-gray-700">
+                  <p>
+                    The server pushes its status to the dashboard using a secure token.
+                    No inbound ports or JSON endpoints required on the client side.
+                  </p>
+
+                  <div className="bg-white border border-emerald-200 rounded p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-900">Push Token</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(pushToken, 'token')}
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        >
+                          {copied === 'token' ? <Check size={12} /> : <Copy size={12} />}
+                          {copied === 'token' ? 'Copied' : 'Copy'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRotate}
+                          disabled={rotating}
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          <RotateCw size={12} className={rotating ? 'animate-spin' : ''} />
+                          Rotate
+                        </button>
+                      </div>
+                    </div>
+                    <code className="block text-xs bg-gray-900 text-emerald-300 px-2 py-2 rounded break-all font-mono">
+                      {pushToken}
+                    </code>
+                  </div>
+
+                  <div className="bg-white border border-emerald-200 rounded p-3 space-y-2">
+                    <p className="font-medium text-gray-900">Install on the server:</p>
+                    <div className="bg-gray-900 text-gray-100 p-3 rounded font-mono text-xs overflow-x-auto whitespace-pre">
+{`sudo curl -o /usr/local/bin/monitor-agent-push.sh \\
+  ${apiUrl}/monitor-agent-push.sh
+sudo chmod +x /usr/local/bin/monitor-agent-push.sh
+
+export MONITOR_API_URL="${apiUrl}"
+export PUSH_TOKEN="${pushToken}"
+export SERVICES="nginx docker ssh"
+export DISK_PATHS="/ /var"
+export PUSH_INTERVAL=60
+
+monitor-agent-push.sh`}
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-emerald-200 rounded p-3">
+                    <p className="font-medium text-gray-900 mb-2">Or call the endpoint directly (any language):</p>
+                    <div className="bg-gray-900 text-gray-100 p-3 rounded font-mono text-xs overflow-x-auto whitespace-pre">
+{`curl -X POST ${apiUrl}/api/push \\
+  -H "Authorization: Bearer ${pushToken}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "agent_type": "custom",
+    "services": [
+      {"name": "nginx", "status": "active", "version": "1.24.0"},
+      {"name": "disk:/", "type": "disk", "status": "active",
+       "disk_path": "/", "disk_usage": 42}
+    ]
+  }'`}
+                    </div>
+                  </div>
+
+                  <a
+                    href={`${apiUrl}/monitor-agent-push.sh`}
+                    download
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors w-full justify-center"
+                  >
+                    <Download size={16} />
+                    Download Push Agent Script
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
             <button
